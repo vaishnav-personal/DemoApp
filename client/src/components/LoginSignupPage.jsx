@@ -47,7 +47,7 @@ export default function LoginSignupPage(props) {
     } catch (error) {
       //try
       console.log(error.response.data);
-      
+
       if (error.response) {
         // Backend responded with 4xx or 5xx
         showMessage(error.response.data.error);
@@ -60,22 +60,24 @@ export default function LoginSignupPage(props) {
     }
   }
   async function handleLoginFormSubmit(e) {
-    let response = await axios.post(
-      import.meta.env.VITE_API_URL + "/users/login",
-      formData
-    );
-    response = response.data;
-    if (response.result == "na") {
-      showMessage("This email-id is not registered by the Admin.");
-    } else if (response.result == "disabled") {
-      showMessage("This account is disabled by the Admin.");
-    } else if (response.result == "signupFirst") {
-      showMessage("First time login. Please signup to set the password.");
-    } else if (response.result == "wrongPassword") {
-      showMessage("You entered wrong password");
-    } else if (response.result == "validUser") {
-      showMessage("Login Successful");
-      props.setLoggedinUser(response.user);
+    try {
+      let response = await axios.post(
+        import.meta.env.VITE_API_URL + "/users/login",
+        formData
+      );
+      showMessage(response.data.message);
+      props.setLoggedinUser(response.data.user);
+    } catch (error) {
+      console.log(error.response.data);
+      if (error.response) {
+        // Backend responded with 4xx or 5xx
+        showMessage(error.response.data.error);
+      } else if (error.request) {
+        showMessage("No response from server");
+      } else {
+        // Something else went wrong
+        showMessage("Unexpected error occurred");
+      }
     }
   }
   function showMessage(m) {
