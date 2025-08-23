@@ -103,5 +103,4 @@ router.delete("/:id", async (req, res, next) => {
     next(error); // Send error to middleware
   }
 });
-
 module.exports = router;

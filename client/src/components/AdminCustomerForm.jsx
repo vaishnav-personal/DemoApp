@@ -6,6 +6,8 @@ export default function AdminCustomerForm(props) {
   let [customer, setCustomer] = useState("");
   let [errorCustomer, setErrorCustomer] = useState(props.customerValidations);
   let [flagFormInvalid, setFlagFormInvalid] = useState(false);
+  let { emptyCustomer } = props;
+  let { customerToBeEdited } = props;
   let { action } = props;
   let { selectedEntity } = props;
   let { categoryList } = props;
@@ -39,9 +41,15 @@ export default function AdminCustomerForm(props) {
     } else if (action === "update") {
       // in edit mode, keep the update button enabled at the beginning
       setFlagFormInvalid(false);
+      // find missing keys
+      const missing = Object.keys(emptyCustomer).filter(
+        (key) => !Object.keys(customerToBeEdited).includes(key)
+      );
+      // add them to objB with empty string
+      missing.forEach((key) => {
+        customerToBeEdited[key] = "";
+      });
       setCustomer(props.customerToBeEdited);
-      console.log("customerToBeEdited.identity");
-      // console.log(customerToBeEdited.identity);      
     }
   }
   function handleTextFieldChange(event) {
@@ -51,6 +59,16 @@ export default function AdminCustomerForm(props) {
     let errCustomer = { ...errorCustomer };
     errorCustomer[`${name}`].message = message;
     setErrorCustomer(errCustomer);
+  }
+  function handleBlur(event) {
+    let name = event.target.name;
+    let message = fieldValidate(event, errorCustomer);
+    let errCustomer = { ...errorCustomer };
+    errorCustomer[`${name}`].message = message;
+    setErrorCustomer(errCustomer);
+  }
+  function handleFocus(event) {
+    setFlagFormInvalid(false);
   }
   function handleRadioFieldChange(event) {
     let name = event.target.name;
@@ -68,16 +86,6 @@ export default function AdminCustomerForm(props) {
         [name]: customer[`${name}`].filter((e) => e !== value),
       });
     }
-  }
-  function handleBlur(event) {
-    let name = event.target.name;
-    let message = fieldValidate(event, errorCustomer);
-    let errCustomer = { ...errorCustomer };
-    errorCustomer[`${name}`].message = message;
-    setErrorCustomer(errCustomer);
-  }
-  function handleFocus(event) {
-    setFlagFormInvalid(false);
   }
   function checkAllErrors() {
     for (let field in errorCustomer) {
@@ -210,13 +218,6 @@ export default function AdminCustomerForm(props) {
     let categoryId = event.target.selectedOptions[0].id;
     setCustomer({ ...customer, category: category, categoryId: categoryId });
   }
-  let optionsCategory = categoryList.map((category, index) =>
-    category.rating != 1 ? (
-      <option value={category.name} key={index} id={category._id}>
-        {category.name}
-      </option>
-    ) : null
-  );
   return (
     <div className="p-2">
       <form className="text-thick p-4" onSubmit={handleFormSubmit}>
@@ -247,49 +248,26 @@ export default function AdminCustomerForm(props) {
                 </div>
       <div className="col-6 my-2">
       <div className="text-bold my-1">
-      <label>Mobile</label>
+      <label>Email Id</label>
       </div>
       <div className=" px-0">
       <input
-      type="text"
+      type="email"
       className="form-control"
-      name="mobile"
-      value={customer.mobile}
+      name="emailId"
+      value={customer.emailId}
       onChange={handleTextFieldChange}
       onBlur={handleBlur}
       onFocus={handleFocus}
-      placeholder="Enter mobile"
+      placeholder="Enter emailId"
       />
       </div>
       <div className="">
-      {errorCustomer.mobile.message ? (
-                <span className="text-danger">{errorCustomer.mobile.message}</span>
+      {errorCustomer.emailId.message ? (
+                <span className="text-danger">{errorCustomer.emailId.message}</span>
                 ) : null}
                 </div>
                 </div>
-       <div className="col-12 my-2">
-            <div className="text-bold my-1">
-              <label>Address</label>
-            </div>
-            <div className="px-0">
-              <textarea
-                className="form-control"
-                name="address"
-                rows={3}
-                value={customer.address}
-                onChange={handleTextFieldChange}
-                onBlur={handleBlur}
-                onFocus={handleFocus}
-                placeholder="Enter address"
-              > </textarea>
-            </div>
-            <div className="">
-              {errorCustomer.address.message ? (
-                <span className="text-danger">{errorCustomer.address.message}</span>
-              ) : null}
-            </div>
-          </div>
-      
         <div className="col-6 my-2">
         <div className="text-bold my-1">
         <label>Gender</label>
@@ -315,148 +293,105 @@ export default function AdminCustomerForm(props) {
           
         <div className="col-6 my-2">
         <div className="text-bold my-1">
-        <label>Married</label>
+        <label>Languages</label>
         </div>
         <div className="px-0"><input
-        type="radio"
-        name="married"
-        value="married"
-        onChange={handleRadioFieldChange}
+        type="checkbox"
+        name="languages"
+        value="ENglish"
+        onChange={handleCheckBoxChange}
         onBlur={handleBlur}
-        onFocus={handleFocus}      
-        checked={customer.married == "married"}
-        />&nbsp;married&nbsp;<input
-        type="radio"
-        name="married"
-        value="unmarried"
-        onChange={handleRadioFieldChange}
+        onFocus={handleFocus}  
+        checked={customer.languages?.includes("ENglish")}    
+        />&nbsp;ENglish&nbsp;<input
+        type="checkbox"
+        name="languages"
+        value="Hindi"
+        onChange={handleCheckBoxChange}
         onBlur={handleBlur}
-        onFocus={handleFocus}      
-        checked={customer.married == "unmarried"}
-        />&nbsp;unmarried&nbsp;</div>
-          </div>
-          
-      <div className="col-6 my-2">
-      <div className="text-bold my-1">
-      <label>Birth Date</label>
-      </div>
-      <div className=" px-0">
-      <input
-      type="date"
-      className="form-control"
-      name="birthDate"
-      value={customer.birthDate}
-      onChange={handleTextFieldChange}
-      onBlur={handleBlur}
-      onFocus={handleFocus}
-      placeholder="Enter birthDate"
-      />
-      </div>
-      <div className="">
-      {errorCustomer.birthDate.message ? (
-                <span className="text-danger">{errorCustomer.birthDate.message}</span>
-                ) : null}
-                </div>
-                </div>
-      <div className="col-6 my-2">
-      <div className="text-bold my-1">
-      <label>Email Id</label>
-      </div>
-      <div className=" px-0">
-      <input
-      type="email"
-      className="form-control"
-      name="emailId"
-      value={customer.emailId}
-      onChange={handleTextFieldChange}
-      onBlur={handleBlur}
-      onFocus={handleFocus}
-      placeholder="Enter emailId"
-      />
-      </div>
-      <div className="">
-      {errorCustomer.emailId.message ? (
-                <span className="text-danger">{errorCustomer.emailId.message}</span>
-                ) : null}
-                </div>
-                </div>
-        <div className="col-6 my-2">
-        <div className="text-bold my-1">
-        <label>Favourite Language</label>
-        </div>
-        <div className="px-0">
-        <select
-        className="form-control"
-        name="favouriteLanguage"
-        value={customer.favouriteLanguage}
-        onChange={(e) =>
-                  setCustomer({ ...customer, favouriteLanguage: e.target.value })
-                }
+        onFocus={handleFocus}  
+        checked={customer.languages?.includes("Hindi")}    
+        />&nbsp;Hindi&nbsp;<input
+        type="checkbox"
+        name="languages"
+        value="Marathi"
+        onChange={handleCheckBoxChange}
         onBlur={handleBlur}
-        onFocus={handleFocus}
-        >
-        <option value="">-- Select favouriteLanguage --</option>
-        
-        <option value="Hindi" id="0">
-        Hindi
-        </option>
-        
-        <option value="English" id="1">
-        English
-        </option>
-        
-        <option value="Marathi" id="2">
-        Marathi
-        </option>
-        </select></div>
+        onFocus={handleFocus}  
+        checked={customer.languages?.includes("Marathi")}    
+        />&nbsp;Marathi&nbsp;</div>
           </div>
           
         <div className="col-6 my-2">
         <div className="text-bold my-1">
-        <label>Identity</label>
+        <label>Programming</label>
         </div>
         <div className="px-0"><input
         type="checkbox"
-        name="identity"
-        value="Aadhar"
+        name="programming"
+        value="C"
         onChange={handleCheckBoxChange}
         onBlur={handleBlur}
         onFocus={handleFocus}  
-        checked={customer.identity?.includes("Aadhar")}    
-        />&nbsp;Aadhar&nbsp;<input
+        checked={customer.programming?.includes("C")}    
+        />&nbsp;C&nbsp;<input
         type="checkbox"
-        name="identity"
-        value="pan"
+        name="programming"
+        value="C++"
         onChange={handleCheckBoxChange}
         onBlur={handleBlur}
         onFocus={handleFocus}  
-        checked={customer.identity?.includes("pan")}    
-        />&nbsp;pan&nbsp;</div>
+        checked={customer.programming?.includes("C++")}    
+        />&nbsp;C++&nbsp;<input
+        type="checkbox"
+        name="programming"
+        value="Java"
+        onChange={handleCheckBoxChange}
+        onBlur={handleBlur}
+        onFocus={handleFocus}  
+        checked={customer.programming?.includes("Java")}    
+        />&nbsp;Java&nbsp;<input
+        type="checkbox"
+        name="programming"
+        value="Python"
+        onChange={handleCheckBoxChange}
+        onBlur={handleBlur}
+        onFocus={handleFocus}  
+        checked={customer.programming?.includes("Python")}    
+        />&nbsp;Python&nbsp;</div>
           </div>
           
-      <div className="col-12 my-2">
+        <div className="col-6 my-2">
         <div className="text-bold my-1">
-          <label>Photo</label>
+        <label>State</label>
         </div>
-        <SingleFileUpload
-          action={action}
-          singleFileList={singleFileList}
-          name="photo"
-          fileName={customer.photo}
-          VITE_API_URL={import.meta.env.VITE_API_URL}
-          onFileChange={handleFileChange}
-          onFileChangeUpdateMode={handleFileChangeUpdateMode}
-          onCancelChangeImageClick={handleCancelChangeImageClick}
-          onFileRemove={handleFileRemove}
-        />
-        <div className="">
-          {errorCustomer.photo.message ? (
-            <span className="text-danger">
-              {errorCustomer.photo.message}
-            </span>
-          ) : null}
-        </div>
-      </div>
+        <div className="px-0"><input
+        type="checkbox"
+        name="state"
+        value="Maharashtra"
+        onChange={handleCheckBoxChange}
+        onBlur={handleBlur}
+        onFocus={handleFocus}  
+        checked={customer.state?.includes("Maharashtra")}    
+        />&nbsp;Maharashtra&nbsp;<input
+        type="checkbox"
+        name="state"
+        value="Gujrat"
+        onChange={handleCheckBoxChange}
+        onBlur={handleBlur}
+        onFocus={handleFocus}  
+        checked={customer.state?.includes("Gujrat")}    
+        />&nbsp;Gujrat&nbsp;<input
+        type="checkbox"
+        name="state"
+        value="Karnataka"
+        onChange={handleCheckBoxChange}
+        onBlur={handleBlur}
+        onFocus={handleFocus}  
+        checked={customer.state?.includes("Karnataka")}    
+        />&nbsp;Karnataka&nbsp;</div>
+          </div>
+          
           <div className="col-12">
             <button
               className="btn btn-primary"

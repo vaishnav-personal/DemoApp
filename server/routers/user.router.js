@@ -23,6 +23,26 @@ router.get("/", async (req, res) => {
     next(error); // Send error to middleware
   }
 });
+router.get("/hello", async (req, res, next) => {
+  const token = req.cookies.token;
+  try {
+    if (!token) {
+      res.status(200).json("");
+    } else {
+      jwt.verify(token, process.env.SECRET_KEY, (err, tokenData) => {
+        if (err) {
+          next(err);
+          return;
+        } else {
+          res.status(200).json(tokenData);
+        }
+      });
+    }
+    // let list = await StudentService.getAllStudents();
+  } catch (error) {
+    next(error); // Send error to middleware
+  }
+});
 router.get("/:id", async (req, res, next) => {
   try {
     let id = req.params.id;

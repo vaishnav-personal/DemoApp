@@ -20,7 +20,7 @@ import { getEmptyObject, getShowInList } from "../external/vite-sdk";
 export default function AdminCustomers(props) {
   let [customerList, setCustomerList] = useState([]);
   let [filteredCustomerList, setFilteredCustomerList] = useState([]);
-  let [categoryList, setCategoryList] = useState([]);
+  
   let [action, setAction] = useState("list");
   let [customerToBeEdited, setCustomerToBeEdited] = useState("");
   let [flagLoad, setFlagLoad] = useState(false);
@@ -35,124 +35,74 @@ export default function AdminCustomers(props) {
   let [recordsToBeUpdated, setRecordsToBeUpdated] = useState([]);
   let [cntUpdate, setCntUpdate] = useState(0);
   let [cntAdd, setCntAdd] = useState(0);
+  let [cntShow, setCntShow] = useState(window.maxCnt); // Initially 5 attributes are shown
   let { selectedEntity } = props;
   let { flagFormInvalid } = props;
-  let { flagToggleButton } = props;
-  let customerSchema = [
-    { attribute: "name", type: "normal" },
-    { attribute: "mobile", type: "normal" },
-    { attribute: "address", type: "normal" },
-    { attribute: "gender", type: "normal" },
-    { attribute: "married", type: "normal" },
-    { attribute: "birthDate", type: "normal" },
-    { attribute: "emailId", type: "normal" },
-    { attribute: "favouriteLanguage", type: "normal" },
-    { attribute: "identity", type: "normal" },
-    {
-      attribute: "photo",
-      type: "singleFile",
-      allowedFileType: "image",
-      allowedSize: "2",
-    },
-  ];
-  let customerValidations = {
-    name: {
-      message: "",
-      mxLen: 100,
-      mnLen: 4,
-      onlyDigits: false,
-    },
-    mobile: {
-      message: "",
-      mxLen: 10,
-      mnLen: 4,
-      onlyDigits: false,
-    },
-    address: {
-      message: "",
-      mxLen: 125,
-      mnLen: 4,
-      onlyDigits: false,
-    },
-    gender: {
-      message: "",
-      mxLen: 10,
-      mnLen: 4,
-      onlyDigits: false,
-    },
-    married: {
-      message: "",
-      mxLen: 10,
-      mnLen: 4,
-      onlyDigits: false,
-    },
-    birthDate: {
-      message: "",
-      mxLen: 10,
-      mnLen: 4,
-      onlyDigits: false,
-    },
-    emailId: {
-      message: "",
-      mxLen: 10,
-      mnLen: 4,
-      onlyDigits: false,
-    },
-    favouriteLanguage: {
-      message: "",
-      mxLen: 10,
-      mnLen: 4,
-      onlyDigits: false,
-    },
-    identity: {
-      message: "",
-      mxLen: 10,
-      mnLen: 4,
-      onlyDigits: false,
-    },
-    photo: {
-      message: "",
-      mxLen: 10,
-      mnLen: 4,
-      onlyDigits: false,
-    },
-  };
-  let [showInList, setShowInList] = useState(getShowInList(customerSchema));
-  let [emptyCustomer, setEmptyCustomer] = useState(
-    getEmptyObject(customerSchema)
-  );
+  let customerSchema=[
+{attribute:"name",type:"normal",},
+{attribute:"emailId",type:"normal",},
+{attribute:"gender",type:"normal",},
+{attribute:"languages",type:"normal",},
+{attribute:"programming",type:"normal",},
+{attribute:"state",type:"normal",},
+]
+  let customerValidations={
+name:{
+    message:"",
+    mxLen:40,
+    mnLen:2,
+    onlyDigits:false
+  },emailId:{
+    message:"",
+    mxLen:100,
+    mnLen:6,
+    onlyDigits:false
+  },gender:{
+    message:"",
+    mxLen:10,
+    mnLen:4,
+    onlyDigits:false
+  },languages:{
+    message:"",
+    mxLen:10,
+    mnLen:4,
+    onlyDigits:false
+  },programming:{
+    message:"",
+    mxLen:10,
+    mnLen:4,
+    onlyDigits:false
+  },state:{
+    message:"",
+    mxLen:10,
+    mnLen:4,
+    onlyDigits:false
+  },}
+  let [showInList, setShowInList] = useState(getShowInList(customerSchema,cntShow));
+  let [emptyCustomer, setEmptyCustomer] = useState(getEmptyObject(customerSchema));
   useEffect(() => {
     getData();
   }, []);
+  
   async function getData() {
-    setFlagLoad(true);
-    try {
-      let response = await axios(import.meta.env.VITE_API_URL + "/customers");
-      let pList = await response.data;
-      response = await axios(import.meta.env.VITE_API_URL + "/categories");
-      let cList = await response.data;
-      // Arrange customers is sorted order as per updateDate
+      setFlagLoad(true);
+      try {
+        let response = await axios(import.meta.env.VITE_API_URL + "/customers");
+        let pList = await response.data;
+    // Arrange products is sorted order as per updateDate
       pList = pList.sort(
         (a, b) => new Date(b.updateDate) - new Date(a.updateDate)
       );
-      // In the customerList, add a parameter - category
+    // update pList with relational-data
       pList.forEach((customer) => {
-        // get category (string) from categoryId
-        for (let i = 0; i < cList.length; i++) {
-          if (customer.categoryId == cList[i]._id) {
-            customer.category = cList[i].name;
-            break;
-          }
-        } //for
-      });
-      setCustomerList(pList);
-      setFilteredCustomerList(pList);
-      setCategoryList(cList);
-    } catch (error) {
-      showMessage("Somecustomer went wrong, refresh the page");
+})//forEach
+setCustomerList(pList);
+      setFilteredCustomerList(pList);} catch (error) {
+        showMessage("Oops! An error occurred. Refresh the page");
+      }
+      setFlagLoad(false);
     }
-    setFlagLoad(false);
-  }
+  
   async function handleFormSubmit(customer) {
     let message;
     // now remove relational data
@@ -215,8 +165,9 @@ export default function AdminCustomers(props) {
           customerForBackEnd,
           { headers: { "Content-type": "multipart/form-data" } }
         );
-        message = "Customer Updated successfully";
         // update the customer list now, relational data is not deleted
+        message = "Customer Updated successfully";
+        // update the customer list now.
         let prList = customerList.map((e, index) => {
           if (e._id == customer._id) return customer;
           return e;
@@ -304,8 +255,8 @@ export default function AdminCustomers(props) {
       showMessage("Minimum 1 field should be selected.");
       return;
     }
-    if (cnt == 5 && checked) {
-      showMessage("Maximum 5 fields can be selected.");
+    if (cnt == window.maxCnt && checked) {
+      showMessage("Maximum " + window.maxCnt + " fields can be selected.");
       return;
     }
     let att = [...showInList];
@@ -313,8 +264,10 @@ export default function AdminCustomers(props) {
       let p = { ...e };
       if (index == selectedIndex && checked) {
         p.show = true;
+        setCntShow(cnt + 1);
       } else if (index == selectedIndex && !checked) {
         p.show = false;
+        setCntShow(cnt - 1);
       }
       return p;
     });
@@ -366,7 +319,6 @@ export default function AdminCustomers(props) {
     } else {
       d = false;
     }
-
     let list = [...filteredCustomerList];
     setDirection(!direction);
     if (d == false) {
@@ -541,7 +493,6 @@ export default function AdminCustomers(props) {
         action={action}
         message={message}
         selectedEntity={selectedEntity}
-        flagToggleButton={flagToggleButton}
         filteredList={filteredCustomerList}
         mainList={customerList}
         showInList={showInList}
@@ -551,7 +502,6 @@ export default function AdminCustomers(props) {
         onExcelFileUploadClick={handleExcelFileUploadClick}
         onClearSelectedFile={handleClearSelectedFile}
       />
-
       {filteredCustomerList.length == 0 && customerList.length != 0 && (
         <div className="text-center">Nocustomer to show</div>
       )}
@@ -561,6 +511,7 @@ export default function AdminCustomers(props) {
       {action == "list" && filteredCustomerList.length != 0 && (
         <CheckBoxHeaders
           showInList={showInList}
+          cntShow={cntShow}
           onListCheckBoxClick={handleListCheckBoxClick}
         />
       )}
@@ -586,6 +537,7 @@ export default function AdminCustomers(props) {
             showInList={showInList}
             sortedField={sortedField}
             direction={direction}
+            cntShow={cntShow}
             onHeaderClick={handleHeaderClick}
           />
           <div className="col-1">&nbsp;</div>
@@ -597,7 +549,7 @@ export default function AdminCustomers(props) {
             customerSchema={customerSchema}
             customerValidations={customerValidations}
             emptyCustomer={emptyCustomer}
-            categoryList={categoryList}
+            
             selectedEntity={selectedEntity}
             customerToBeEdited={customerToBeEdited}
             action={action}
@@ -620,6 +572,7 @@ export default function AdminCustomers(props) {
             listSize={filteredCustomerList.length}
             selectedEntity={selectedEntity}
             showInList={showInList}
+            cntShow={cntShow}
             VITE_API_URL={import.meta.env.VITE_API_URL}
             onEditButtonClick={handleEditButtonClick}
             onDeleteButtonClick={handleDeleteButtonClick}

@@ -3,11 +3,8 @@ const { ObjectId } = require("mongodb");
 
 async function getAllProducts() {
   const db = app.locals.db;
-
   const collection = db.collection("products");
-
   let list = await collection.find().toArray();
-
   return list;
 }
 async function getProductById(id) {

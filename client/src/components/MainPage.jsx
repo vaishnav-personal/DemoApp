@@ -3,6 +3,9 @@ import ContentPage from "./ContentPage";
 import LoginSignupPage from "./LoginSignupPage";
 import axios from "axios";
 import { BeatLoader } from "react-spinners";
+import AdminManageMenus from "./AdminManageMenus";
+import AdminSettingMenus from "./AdminSettingMenus";
+import AdminReportMenus from "./AdminReportMenus";
 export default function MainPage() {
   let [selectedEntity, setSelectedEntity] = useState("");
   let [user, setUser] = useState("");
@@ -11,81 +14,33 @@ export default function MainPage() {
   let [message, setMessage] = useState("");
   let [selectedMenuIndex, setSelectedMenuIndex] = useState(-1);
   let [selectedEntityIndex, setSelectedEntityIndex] = useState(-1);
-  let menus = [
-    {
-      name: "Manage",
-      accessLevel: "D",
-      entities: [
-        {
-          name: "Products",
-          singularName: "Product",
-          addFacility: true,
-          deleteFacility: true,
-          editFacility: true,
-          isReady: true,
-          accessLevel: "D",
-        },
-        {
-          name: "Product Categories",
-          singularName: "Category",
-          addFacility: true,
-          deleteFacility: false,
-          editFacility: false,
-          isReady: true,
-          accessLevel: "A",
-        },
-        {
-          name: "Customers",
-          singularName: "Customer",
-          addFacility: true,
-          deleteFacility: true,
-          editFacility: true,
-          isReady: true,
-          accessLevel: "A",
-        },
-      ],
-    },
-    {
-      name: "Settings",
-      accessLevel: "A",
-      entities: [
-        {
-          name: "Users",
-          singularName: "User",
-          dbCollection: "users",
-          addFacility: true,
-          deleteFacility: true,
-          editFacility: true,
-          accessLevel: "A",
-        },
-        {
-          name: "Roles",
-          singularName: "Role",
-          dbCollection: "roles",
-          addFacility: true,
-          deleteFacility: true,
-          editFacility: true,
-          accessLevel: "A",
-        },
-      ],
-    },
-    {
-      accessLevel: "D",
-      name: "Reports",
-      entities: [
-        {
-          name: "Activity Report",
-          singularName: "Activity",
-          dbCollection: "activities",
-          addFacility: true,
-          deleteFacility: true,
-          editFacility: true,
-          accessLevel: "A",
-        },
-      ],
-    },
-  ];
-  useEffect(() => {}, []);
+  let [flagCheckSession, setFlagCheckSession] = useState(false);
+  let adminMenus = [];
+  adminMenus.push(AdminManageMenus);
+  adminMenus.push(AdminSettingMenus);
+  adminMenus.push(AdminReportMenus);
+  useEffect(() => {
+    checkSessionExists();
+  }, []);
+  async function checkSessionExists() {
+    setFlagCheckSession(true);
+    try {
+      let response = await axios.get(
+        import.meta.env.VITE_API_URL + "/users/hello"
+      );
+      response = response.data;
+      setFlagCheckSession(false);
+      if (!response) {
+      } else {
+        //already logged in
+        setUser(response);
+        setView("home");
+      }
+    } catch (err) {
+      setFlagCheckSession(false);
+      console.log(err);
+    }
+  }
   function handleEntityClick(selectedIndex) {
     // user clicked to same entity again, so unselect it
     // if (
@@ -95,7 +50,7 @@ export default function MainPage() {
     }
     if (
       selectedEntity.name ==
-      menus[selectedMenuIndex].entities[selectedIndex].name
+      adminMenus[selectedMenuIndex].entities[selectedIndex].name
     ) {
       setSelectedMenuIndex(-1);
       setSelectedEntityIndex(-1);
@@ -103,7 +58,7 @@ export default function MainPage() {
       return;
     }
     setSelectedEntityIndex(selectedIndex);
-    setSelectedEntity(menus[selectedMenuIndex].entities[selectedIndex]);
+    setSelectedEntity(adminMenus[selectedMenuIndex].entities[selectedIndex]);
     setView("content");
   }
   function handleSideBarMenuClick(index) {
@@ -155,8 +110,7 @@ export default function MainPage() {
           {message.toUpperCase()}
         </div>
       )}
-
-      {view === "home" ? (
+      {view === "home" && (
         <div className="d-flex flex-column align-items-center justify-content-center min-vh-100 bg-gradient-primary-light p-3">
           <div className="col-lg-5 col-md-7 col-sm-9 p-4 bg-white rounded-3 shadow-lg text-center animate__animated animate__fadeInDown">
             {user && (
@@ -184,7 +138,7 @@ export default function MainPage() {
               )}
             </div>
             <ul className="list-unstyled text-start">
-              {menus.map((menu, menuIndex) => (
+              {adminMenus.map((menu, menuIndex) => (
                 <li key={menuIndex} className="mb-3">
                   <button
                     className={`btn w-100 text-start py-3 fs-5 d-flex align-items-center justify-content-between ${
@@ -230,24 +184,23 @@ export default function MainPage() {
             </ul>
           </div>
         </div>
-      ) : (
-        <div className="container-fluid py-4">
-          {view === "loginSignup" && !user && (
-            <LoginSignupPage
-              setLoggedinUser={setLoggedinUser}
-              onCloseLoginSignupPageClose={handleCloseLoginSignupPageClose}
-              onBackButtonClick={handleBackButtonClick}
-            />
-          )}
-          {view === "content" && (
-            <ContentPage
-              selectedEntity={selectedEntity}
-              user={user}
-              onBackButtonClick={handleBackButtonClick}
-            />
-          )}
-        </div>
       )}
+      <div className="container-fluid py-4">
+        {!user && (
+          <LoginSignupPage
+            setLoggedinUser={setLoggedinUser}
+            onCloseLoginSignupPageClose={handleCloseLoginSignupPageClose}
+            onBackButtonClick={handleBackButtonClick}
+          />
+        )}
+        {view === "content" && (
+          <ContentPage
+            selectedEntity={selectedEntity}
+            user={user}
+            onBackButtonClick={handleBackButtonClick}
+          />
+        )}
+      </div>
     </>
   );
 }

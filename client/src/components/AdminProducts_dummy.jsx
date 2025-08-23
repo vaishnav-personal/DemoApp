@@ -5,7 +5,7 @@ import {
   ListHeaders,
   Entity,
 } from "../external/vite-sdk";
-import AdminProductForm from "./AdminProductForm";
+import AdminThingForm from "./AdminThingForm";
 import { BeatLoader } from "react-spinners";
 import axios from "axios";
 import * as XLSX from "xlsx";
@@ -16,12 +16,13 @@ import {
   analyseImportExcelSheet,
 } from "../external/vite-sdk";
 import { getEmptyObject, getShowInList } from "../external/vite-sdk";
-export default function AdminProducts(props) {
-  let [productList, setProductList] = useState([]);
-  let [filteredProductList, setFilteredProductList] = useState([]);
-  let [categoryList, setCategoryList] = useState([]);
+
+export default function AdminThings(props) {
+  let [thingList, setThingList] = useState([]);
+  let [filteredThingList, setFilteredThingList] = useState([]);
+  let Add_Relational_Lists_Here;
   let [action, setAction] = useState("list");
-  let [productToBeEdited, setProductToBeEdited] = useState("");
+  let [thingToBeEdited, setThingToBeEdited] = useState("");
   let [flagLoad, setFlagLoad] = useState(false);
   let [flagImport, setFlagImport] = useState(false);
   let [message, setMessage] = useState("");
@@ -37,164 +38,101 @@ export default function AdminProducts(props) {
   let [cntShow, setCntShow] = useState(window.maxCnt); // Initially 5 attributes are shown
   let { selectedEntity } = props;
   let { flagFormInvalid } = props;
-  let productSchema = [
-    { attribute: "name", type: "normal" },
-    {
-      attribute: "category",
-      type: "normal",
-      relationalData: true,
-      list: "categoryList",
-      relatedId: "categoryId",
-    },
-    { attribute: "categoryId", type: "relationalId" },
-    { attribute: "price", type: "normal" },
-    { attribute: "finalPrice", type: "normal" },
-    {
-      attribute: "productImage",
-      type: "singleFile",
-      allowedFileType: "image",
-      allowedSize: 2,
-    },
-    { attribute: "info", type: "text-area" },
-  ];
-  let productValidations = {
-    name: { message: "", mxLen: 200, mnLen: 4, onlyDigits: false },
-    price: {
-      message: "",
-      mxLen: 30,
-      mnLen: 2,
-      onlyDigits: true,
-    },
-    finalPrice: {
-      message: "",
-      mxLen: 30,
-      mnLen: 2,
-      onlyDigits: true,
-    },
-    info: { message: "", mxLen: 1000, mnLen: 4, onlyDigits: false },
-    productImage: { message: "" },
-    category: { message: "" },
-  };
+  let thingSchema;
+  let thingValidations;
   let [showInList, setShowInList] = useState(
-    getShowInList(productSchema, cntShow)
+    getShowInList(thingSchema, cntShow)
   );
-  let [emptyProduct, setEmptyProduct] = useState(getEmptyObject(productSchema));
+  let [emptyThing, setEmptyThing] = useState(getEmptyObject(thingSchema));
   useEffect(() => {
     getData();
   }, []);
-  async function getData() {
-    setFlagLoad(true);
-    try {
-      let response = await axios(import.meta.env.VITE_API_URL + "/products");
-      let pList = await response.data;
-      response = await axios(import.meta.env.VITE_API_URL + "/categories");
-      let cList = await response.data;
-      // Arrange products is sorted order as per updateDate
-      pList = pList.sort(
-        (a, b) => new Date(b.updateDate) - new Date(a.updateDate)
-      );
-      // update pList with relational-data
-      pList.forEach((product) => {        
-        for (let i = 0; i < cList.length; i++) {
-          if (product.categoryId == cList[i]._id) {
-            product.category = cList[i].name;
-            break;
-          }
-        } //for
-      });
-      setProductList(pList);
-      setFilteredProductList(pList);
-      setCategoryList(cList);
-    } catch (error) {
-      showMessage("Something went wrong, refresh the page");
-    }
-    setFlagLoad(false);
-  }
-  async function handleFormSubmit(product) {
+  let write_getdata_function_here;
+  async function handleFormSubmit(thing) {
     let message;
     // now remove relational data
-    let productForBackEnd = { ...product };
-    for (let key in productForBackEnd) {
-      productSchema.forEach((e, index) => {
+    let thingForBackEnd = { ...thing };
+    for (let key in thingForBackEnd) {
+      thingSchema.forEach((e, index) => {
         if (key == e.attribute && e.relationalData) {
-          delete productForBackEnd[key];
+          delete thingForBackEnd[key];
         }
       });
     }
     if (action == "add") {
-      // product = await addProductToBackend(product);
+      // thing = await addThingToBackend(thing);
       setFlagLoad(true);
       try {
         let response = await axios.post(
-          import.meta.env.VITE_API_URL + "/products",
-          productForBackEnd,
+          import.meta.env.VITE_API_URL + "/things",
+          thingForBackEnd,
           { headers: { "Content-type": "multipart/form-data" } }
         );
-        let addedProduct = await response.data; //returned  with id
-        // This addedProduct has id, addDate, updateDate, but the relational data is lost
-        // The original product has got relational data.
-        for (let key in product) {
-          productSchema.forEach((e, index) => {
+        let addedThing = await response.data; //returned  with id
+        // This addedThing has id, addDate, updateDate, but the relational data is lost
+        // The original thing has got relational data.
+        for (let key in thing) {
+          thingSchema.forEach((e, index) => {
             if (key == e.attribute && e.relationalData) {
-              addedProduct[key] = product[key];
+              addedThing[key] = thing[key];
             }
           });
         }
-        message = "Product added successfully";
-        // update the product list now.
-        let prList = [...productList];
-        prList.push(addedProduct);
+        message = "Thing added successfully";
+        // update the thing list now.
+        let prList = [...thingList];
+        prList.push(addedThing);
         prList = prList.sort(
           (a, b) => new Date(b.updateDate) - new Date(a.updateDate)
         );
-        setProductList(prList);
-        let fprList = [...filteredProductList];
-        fprList.push(addedProduct);
+        setThingList(prList);
+        let fprList = [...filteredThingList];
+        fprList.push(addedThing);
         fprList = fprList.sort(
           (a, b) => new Date(b.updateDate) - new Date(a.updateDate)
         );
-        setFilteredProductList(fprList);
+        setFilteredThingList(fprList);
         // update the list in sorted order of updateDate
         showMessage(message);
         setAction("list");
       } catch (error) {
         console.log(error);
-        showMessage("Something went wrong, refresh the page");
+        showMessage("Oops, some error, refresh the page");
       }
       setFlagLoad(false);
     } //...add
     else if (action == "update") {
-      productForBackEnd._id = productToBeEdited._id; // The form does not have id field
+      thingForBackEnd._id = thingToBeEdited._id; // The form does not have id field
       setFlagLoad(true);
       try {
         let response = await axios.put(
-          import.meta.env.VITE_API_URL + "/products",
-          productForBackEnd,
+          import.meta.env.VITE_API_URL + "/things",
+          thingForBackEnd,
           { headers: { "Content-type": "multipart/form-data" } }
         );
         // update the thing list now, relational data is not deleted
-        message = "Product Updated successfully";
-        // update the product list now.
-        let prList = productList.map((e, index) => {
-          if (e._id == product._id) return product;
+        message = "Thing Updated successfully";
+        // update the thing list now.
+        let prList = thingList.map((e, index) => {
+          if (e._id == thing._id) return thing;
           return e;
         });
         prList = prList.sort(
           (a, b) => new Date(b.updateDate) - new Date(a.updateDate)
         );
-        let fprList = filteredProductList.map((e, index) => {
-          if (e._id == product._id) return product;
+        let fprList = filteredThingList.map((e, index) => {
+          if (e._id == thing._id) return thing;
           return e;
         });
         fprList = fprList.sort(
           (a, b) => new Date(b.updateDate) - new Date(a.updateDate)
         );
-        setProductList(prList);
-        setFilteredProductList(fprList);
+        setThingList(prList);
+        setFilteredThingList(fprList);
         showMessage(message);
         setAction("list");
       } catch (error) {
-        showMessage("Something went wrong, refresh the page");
+        showMessage("Oops, some error, Refresh the page");
       }
     } //else ...(update)
     setFlagLoad(false);
@@ -208,9 +146,9 @@ export default function AdminProducts(props) {
   function handleAddEntityClick() {
     setAction("add");
   }
-  function handleEditButtonClick(product) {
+  function handleEditButtonClick(thing) {
     setAction("update");
-    setProductToBeEdited(product);
+    setThingToBeEdited(thing);
   }
   function showMessage(message) {
     setMessage(message);
@@ -218,7 +156,7 @@ export default function AdminProducts(props) {
       setMessage("");
     }, 3000);
   }
-  function handleDeleteButtonClick(ans, product) {
+  function handleDeleteButtonClick(ans, thing) {
     if (ans == "No") {
       // delete operation cancelled
       showMessage("Delete operation cancelled");
@@ -226,27 +164,27 @@ export default function AdminProducts(props) {
     }
     if (ans == "Yes") {
       // delete operation allowed
-      performDeleteOperation(product);
+      performDeleteOperation(thing);
     }
   }
-  async function performDeleteOperation(product) {
+  async function performDeleteOperation(thing) {
     setFlagLoad(true);
     try {
       let response = await axios.delete(
-        import.meta.env.VITE_API_URL + "/products/" + product._id
+        import.meta.env.VITE_API_URL + "/things/" + thing._id
       );
       let r = await response.data;
-      message = `Product - ${product.name} deleted successfully.`;
-      //update the product list now.
-      let prList = productList.filter((e, index) => e._id != product._id);
-      setProductList(prList);
+      message = `Thing - ${thing.name} deleted successfully.`;
+      //update the thing list now.
+      let prList = thingList.filter((e, index) => e._id != thing._id);
+      setThingList(prList);
 
-      let fprList = productList.filter((e, index) => e._id != product._id);
-      setFilteredProductList(fprList);
+      let fprList = thingList.filter((e, index) => e._id != thing._id);
+      setFilteredThingList(fprList);
       showMessage(message);
     } catch (error) {
       console.log(error);
-      showMessage("Something went wrong, refresh the page");
+      showMessage("Oops, some error, Refresh the page");
     }
     setFlagLoad(false);
   }
@@ -290,7 +228,7 @@ export default function AdminProducts(props) {
       // different field
       d = false;
     }
-    let list = [...filteredProductList];
+    let list = [...filteredThingList];
     setDirection(d);
     if (d == false) {
       //in ascending order
@@ -315,7 +253,7 @@ export default function AdminProducts(props) {
         return 0;
       });
     }
-    setFilteredProductList(list);
+    setFilteredThingList(list);
     setSortedField(field);
   }
   function handleSrNoClick() {
@@ -326,8 +264,7 @@ export default function AdminProducts(props) {
     } else {
       d = false;
     }
-
-    let list = [...filteredProductList];
+    let list = [...filteredThingList];
     setDirection(!direction);
     if (d == false) {
       //in ascending order
@@ -353,7 +290,7 @@ export default function AdminProducts(props) {
       });
     }
     // setSelectedList(list);
-    setFilteredProductList(list);
+    setFilteredThingList(list);
     setSortedField("updateDate");
   }
   function handleFormTextChangeValidations(message, index) {
@@ -367,12 +304,12 @@ export default function AdminProducts(props) {
   function performSearchOperation(searchText) {
     let query = searchText.trim();
     if (query.length == 0) {
-      setFilteredProductList(productList);
+      setFilteredThingList(thingList);
       return;
     }
-    let searchedProducts = [];
-    searchedProducts = filterByShowInListAttributes(query);
-    setFilteredProductList(searchedProducts);
+    let searchedThings = [];
+    searchedThings = filterByShowInListAttributes(query);
+    setFilteredThingList(searchedThings);
   }
   function filterByName(query) {
     let fList = [];
@@ -385,17 +322,17 @@ export default function AdminProducts(props) {
   }
   function filterByShowInListAttributes(query) {
     let fList = [];
-    for (let i = 0; i < productList.length; i++) {
+    for (let i = 0; i < thingList.length; i++) {
       for (let j = 0; j < showInList.length; j++) {
         if (showInList[j].show) {
           let parameterName = showInList[j].attribute;
           if (
-            productList[i][parameterName] &&
-            productList[i][parameterName]
+            thingList[i][parameterName] &&
+            thingList[i][parameterName]
               .toLowerCase()
               .includes(query.toLowerCase())
           ) {
-            fList.push(productList[i]);
+            fList.push(thingList[i]);
             break;
           }
         }
@@ -426,13 +363,13 @@ export default function AdminProducts(props) {
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
       // const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
       setSheetData(jsonData);
-      let result = analyseImportExcelSheet(jsonData, productList);
+      let result = analyseImportExcelSheet(jsonData, thingList);
       if (result.message) {
         showMessage(result.message);
       } else {
         showImportAnalysis(result);
       }
-      // analyseSheetData(jsonData, productList);
+      // analyseSheetData(jsonData, thingList);
     };
     // reader.readAsBinaryString(file);
     reader.readAsArrayBuffer(file);
@@ -456,32 +393,32 @@ export default function AdminProducts(props) {
       if (recordsToBeAdded.length > 0) {
         result = await recordsAddBulk(
           recordsToBeAdded,
-          "products",
-          productList,
+          "things",
+          thingList,
           import.meta.env.VITE_API_URL
         );
         if (result.success) {
-          setProductList(result.updatedList);
-          setFilteredProductList(result.updatedList);
+          setThingList(result.updatedList);
+          setFilteredThingList(result.updatedList);
         }
         showMessage(result.message);
       }
       if (recordsToBeUpdated.length > 0) {
         result = await recordsUpdateBulk(
           recordsToBeUpdated,
-          "products",
-          productList,
+          "things",
+          thingList,
           import.meta.env.VITE_API_URL
         );
         if (result.success) {
-          setProductList(result.updatedList);
-          setFilteredProductList(result.updatedList);
+          setThingList(result.updatedList);
+          setFilteredThingList(result.updatedList);
         }
         showMessage(result.message);
       } //if
     } catch (error) {
       console.log(error);
-      showMessage("Something went wrong, refresh the page");
+      showMessage("Oops, some error, Refresh the page");
     }
     setFlagLoad(false);
   }
@@ -501,8 +438,8 @@ export default function AdminProducts(props) {
         action={action}
         message={message}
         selectedEntity={selectedEntity}
-        filteredList={filteredProductList}
-        mainList={productList}
+        filteredList={filteredThingList}
+        mainList={thingList}
         showInList={showInList}
         onListClick={handleListClick}
         onAddEntityClick={handleAddEntityClick}
@@ -510,21 +447,20 @@ export default function AdminProducts(props) {
         onExcelFileUploadClick={handleExcelFileUploadClick}
         onClearSelectedFile={handleClearSelectedFile}
       />
-
-      {filteredProductList.length == 0 && productList.length != 0 && (
+      {filteredThingList.length == 0 && thingList.length != 0 && (
         <div className="text-center">Nothing to show</div>
       )}
-      {productList.length == 0 && (
+      {thingList.length == 0 && (
         <div className="text-center">List is empty</div>
       )}
-      {action == "list" && filteredProductList.length != 0 && (
+      {action == "list" && filteredThingList.length != 0 && (
         <CheckBoxHeaders
           showInList={showInList}
           cntShow={cntShow}
           onListCheckBoxClick={handleListCheckBoxClick}
         />
       )}
-      {action == "list" && filteredProductList.length != 0 && (
+      {action == "list" && filteredThingList.length != 0 && (
         <div className="row   my-2 mx-auto  p-1">
           <div className="col-1">
             <a
@@ -554,13 +490,13 @@ export default function AdminProducts(props) {
       )}
       {(action == "add" || action == "update") && (
         <div className="row">
-          <AdminProductForm
-            productSchema={productSchema}
-            productValidations={productValidations}
-            emptyProduct={emptyProduct}
-            categoryList={categoryList}
+          <AdminThingForm
+            thingSchema={thingSchema}
+            thingValidations={thingValidations}
+            emptyThing={emptyThing}
+            //add_props_here
             selectedEntity={selectedEntity}
-            productToBeEdited={productToBeEdited}
+            thingToBeEdited={thingToBeEdited}
             action={action}
             flagFormInvalid={flagFormInvalid}
             onFormSubmit={handleFormSubmit}
@@ -570,15 +506,15 @@ export default function AdminProducts(props) {
         </div>
       )}
       {action == "list" &&
-        filteredProductList.length != 0 &&
-        filteredProductList.map((e, index) => (
+        filteredThingList.length != 0 &&
+        filteredThingList.map((e, index) => (
           <Entity
             entity={e}
             key={index + 1}
             index={index}
             sortedField={sortedField}
             direction={direction}
-            listSize={filteredProductList.length}
+            listSize={filteredThingList.length}
             selectedEntity={selectedEntity}
             showInList={showInList}
             cntShow={cntShow}
