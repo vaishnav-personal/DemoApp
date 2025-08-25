@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const RoleService = require("../services/role.service");
 const multer = require("multer");
+const { normalizeNewlines } = require("../services/utilities/lib");
 // const upload = multer({ dest: "uploads/" });
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -23,14 +24,22 @@ router.get("/", async (req, res, next) => {
 router.get("/:id", async (req, res, next) => {
   try {
     let id = req.params.id;
-    res.send(await RoleService.getRoleById(id));
+    let obj = await RoleService.getRoleById(id);
+    res.send(obj);
   } catch (error) {
     next(error); // Send error to middleware
   }
 });
-router.post("/", upload.single("file"), async (req, res, next) => {
+router.post("/", upload.any(), async (req, res, next) => {
   try {
     let obj = req.body;
+    // normalize text
+    const keys = Object.keys(obj);
+    for (let key of keys) {
+      if (typeof obj[key] == "string") {
+        obj[key] = normalizeNewlines(obj[key]);
+      }
+    }
     obj.addDate = new Date();
     obj.updateDate = new Date();
     obj = await RoleService.addRole(obj);
@@ -39,12 +48,47 @@ router.post("/", upload.single("file"), async (req, res, next) => {
     next(error); // Send error to middleware
   }
 });
-router.put("/", upload.single("file"), async (req, res, next) => {
+router.post("/bulk-add", upload.any(), async (req, res, next) => {
+  let roles = req.body;
+  if (!Array.isArray(roles)) {
+    return res.status(400).json({ message: "Invalid input, expected array" });
+  }
+  roles.forEach((e, index) => {
+    e.addDate = new Date();
+    e.updateDate = new Date();
+  });
+  try {
+    let result = await RoleService.addManyRoles(roles);
+    res.status(201).json(result);
+  } catch (error) {
+    next(error); // Send error to middleware
+  }
+});
+router.put("/", upload.any(), async (req, res, next) => {
   try {
     let obj = req.body;
     obj.updateDate = new Date();
-    obj = await RoleService.updateRole(obj);
-    res.status(200).json(obj);
+    let id = obj._id;
+    let result = await RoleService.updateRole(obj);
+    if (result.modifiedCount == 1) {
+      obj._id = id;
+      res.status(200).json(obj);
+    }
+  } catch (error) {
+    next(error); // Send error to middleware
+  }
+});
+router.put("/bulk-update", upload.any(), async (req, res, next) => {
+  let roles = req.body;
+  if (!Array.isArray(roles)) {
+    return res.status(400).json({ message: "Invalid input, expected array" });
+  }
+  roles.forEach((e, index) => {
+    e.updateDate = new Date();
+  });
+  try {
+    let result = await RoleService.updateManyRoles(roles);
+    res.status(201).json(result);
   } catch (error) {
     next(error); // Send error to middleware
   }

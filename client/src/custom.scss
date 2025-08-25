@@ -1,0 +1,24 @@
+// 1. Import Bootstrap functions first
+@import "bootstrap/scss/functions";
+// 2. Extend theme colors
+$theme-colors: (
+    "primary": #0d6efd,
+//   "primary": #6f42c1,
+  "secondary": #6c757d,
+  "success": #198754,
+  "danger": #dc3545,
+  "warning": #ffc107,
+  "info": #0dcaf0,
+  "light": #f8f9fa,
+  "dark": #212529,
+
+  // 🚀 Your custom colors
+  "purple": #6f42c1,
+  "teal": #20c997,
+  "orange": #fd7e14,
+  "pink": #d63384,
+  "cyan": #17a2b8
+);
+
+// 3. Import Bootstrap itself
+@import "bootstrap/scss/bootstrap";
