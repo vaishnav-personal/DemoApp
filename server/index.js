@@ -6,9 +6,7 @@ const { app } = require("./init.js");
 var cors = require("cors");
 const authenticateUser = require("./authenticateUser.js");
 const productRouter = require("./routers/product.router.js");
-const customerRouter = require("./routers/customer.router.js");
 const userRouter = require("./routers/user.router.js");
-const roleRouter = require("./routers/role.router.js");
 const categoryRouter = require("./routers/category.router.js");
 const fileRouter = require("./routers/file.router.js");
 const specialRouter = require("./routers/special.router.js");
@@ -31,10 +29,8 @@ app.use(logActivity);
 
 app.use("/specials", specialRouter); // authentication not required
 app.use("/users", userRouter); // authentication done inside this file
-app.use("/products", productRouter);
-app.use("/customers", customerRouter);
-app.use("/roles", roleRouter);
-app.use("/categories", categoryRouter);
+app.use("/products", checkAuthority, productRouter);
+app.use("/categories", checkAuthority, categoryRouter);
 app.use("/files", fileRouter);
 app.use("/uploadedImages", express.static("uploads"));
 app.use(errorLogger); // This should be the last middleware.
@@ -63,4 +59,12 @@ function logActivity(req, res, next) {
   }
   logger.warn(log);
   next();
+}
+function checkAuthority(req, res, next) {
+  if (!req.tokenData || req.tokenData.role == "guest") {
+    // assuming you set req.user after authentication
+    res.status(401).json({ message: "Unauthorized" });
+  } else {
+    next(); // allow
+  }
 }

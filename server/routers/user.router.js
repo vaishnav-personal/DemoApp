@@ -15,7 +15,7 @@ const storage = multer.diskStorage({
   },
 });
 const upload = multer({ storage: storage });
-router.get("/", async (req, res) => {
+router.get("/", allowToAdminOnly, async (req, res) => {
   try {
     let list = await UserService.getAllUsers();
     res.status(200).json(list);
@@ -61,8 +61,8 @@ router.get("/byEmailId/:emailId", async (req, res, next) => {
 });
 router.post(
   "/",
-  auntheticateUser,
-  logActivity,
+
+  allowToAdminOnly,
   upload.single("file"),
   async (req, res, next) => {
     try {
@@ -154,8 +154,7 @@ router.post("/login", async (req, res, next) => {
 });
 router.put(
   "/",
-  auntheticateUser,
-  logActivity,
+  allowToAdminOnly,
   upload.single("file"),
   async (req, res, next) => {
     try {
@@ -168,7 +167,7 @@ router.put(
     }
   }
 );
-router.delete("/:id", auntheticateUser, logActivity, async (req, res, next) => {
+router.delete("/:id", allowToAdminOnly, async (req, res, next) => {
   try {
     let id = req.params.id;
     obj = await UserService.deleteUser(id);
@@ -178,61 +177,18 @@ router.delete("/:id", auntheticateUser, logActivity, async (req, res, next) => {
   }
 });
 //================
-function auntheticateUser(req, res, next) {
-  const token = req.cookies.token;
-
-  if (!token) {
-    // This is unauthorized way... but before responding let us add to log
-    req.activity = "Unauthorized";
-    next();
-    return; //**Important */
-    // return res.sendStatus(401); // Unauthorized
+function allowToAdminOnly(req, res, next) {
+  if (
+    !req.tokenData ||
+    req.tokenData.role == "guest" ||
+    req.tokenData.role == "user"
+  ) {
+    // assuming you set req.user after authentication
+    res.status(401).json({ message: "Unauthorized" });
+  } else if (req.tokenData.role == "admin") {
+    next(); // allow
+  } else {
+    res.status(401).json({ message: "OOPs...Some Error.." });
   }
-  jwt.verify(token, process.env.SECRET_KEY, (err, tokenData) => {
-    console.log(tokenData.role + "AAI");
-
-    if (err) {
-      // There might be tempering with the token... but before responding let us add to log
-      req.activity = "Forbidden";
-      next();
-      return;
-      // res.sendStatus(403); // Forbidden
-    }
-    if (tokenData.role == "guest") {
-      // Guest is trying to do the things illegally
-      // but before responding let us add to log
-      req.activity = "guestActivity";
-      next();
-      return;
-      // return res.sendStatus(401); // Unauthorized
-    }
-    req.tokenData = tokenData; // Attach user info to request
-    next();
-  });
-}
-function logActivity(req, res, next) {
-  if (req.activity == "Unauthorized") {
-    logger.warn(
-      `Unauthorized operation -->` + req.method + "--->" + req.baseUrl.slice(1)
-    );
-    return res.sendStatus(401);
-  } else if (req.activity == "Forbidden") {
-    logger.warn(
-      `Forbidden woperation -->` + req.method + "--->" + req.baseUrl.slice(1)
-    );
-    return res.sendStatus(403);
-  } else if (req.activity == "guestActivity") {
-    logger.warn(
-      `Guest's illegal operation -->` +
-        req.method +
-        "--->" +
-        req.baseUrl.slice(1)
-    );
-    return res.sendStatus(401); // Unauthorized
-  }
-  logger.info(
-    req.tokenData.name + "-->" + req.method + "--->" + req.baseUrl.slice(1)
-  );
-  next();
 }
 module.exports = router;
