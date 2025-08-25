@@ -1,0 +1,11 @@
+1. client side .env file:
+VITE_API_URL=http://localhost:3002
+VITE_PORT=5175
+
+2. server side .env file:
+SECRET_KEY="<anything>"
+MONGODB_URL="<mongodb-connection-string>"
+JWT_EXPIRY=1h
+PORT=3002
+ORIGIN="http://localhost:5175"
+
