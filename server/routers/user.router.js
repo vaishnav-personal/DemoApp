@@ -115,7 +115,6 @@ Use 422 for validation errors.
 router.post("/login", async (req, res, next) => {
   try {
     let obj = req.body;
-    // initially password of new user is empty
     let userObj = await UserService.checkUserTryingToLogIn(obj);
     if (!userObj) {
       // No such user

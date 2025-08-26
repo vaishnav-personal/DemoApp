@@ -7,9 +7,7 @@ import TrialPage from "./components/TrialPage";
 function App() {
   axios.defaults.withCredentials = true; // ⬅️ Important!
   window.maxCnt = useIsMobile() ? 2 : 5;
-  // window.formLayout = "singleColumn"; //
   window.formLayout = "doubleColumns"; // doubleColumns
-  // win
   return (
     <>
       <Router>

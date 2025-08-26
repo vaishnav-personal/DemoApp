@@ -10,7 +10,6 @@ export default function MainPage() {
   let [selectedEntity, setSelectedEntity] = useState("");
   let [user, setUser] = useState("");
   let [view, setView] = useState("loginSignup");
-  let [flagLoad, setFlagLoad] = useState(false);
   let [message, setMessage] = useState("");
   let [selectedMenuIndex, setSelectedMenuIndex] = useState(-1);
   let [selectedEntityIndex, setSelectedEntityIndex] = useState(-1);
@@ -42,8 +41,6 @@ export default function MainPage() {
     }
   }
   function handleEntityClick(selectedIndex) {
-    // user clicked to same entity again, so unselect it
-    // if (
     if (!user) {
       showMessage("Please log in to access this option.");
       return;
@@ -60,7 +57,7 @@ export default function MainPage() {
     setSelectedEntityIndex(selectedIndex);
     setSelectedEntity(adminMenus[selectedMenuIndex].entities[selectedIndex]);
     setView("content");
-  }
+  } 
   function handleSideBarMenuClick(index) {
     if (!user) {
       showMessage("Please log in to access menu options.");
@@ -96,7 +93,7 @@ export default function MainPage() {
     setSelectedEntityIndex(-1);
     setSelectedEntity("");
   }
-  if (flagLoad) {
+  if (flagCheckSession) {
     return (
       <div className="my-5 text-center">
         <BeatLoader size={24} color={"blue"} />

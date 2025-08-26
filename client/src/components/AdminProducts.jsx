@@ -86,15 +86,15 @@ export default function AdminProducts(props) {
     setFlagLoad(true);
     try {
       let response = await axios(import.meta.env.VITE_API_URL + "/products");
-      let pList = await response.data;
+      let pList = response.data;
       response = await axios(import.meta.env.VITE_API_URL + "/categories");
-      let cList = await response.data;
+      let cList = response.data;
       // Arrange products is sorted order as per updateDate
       pList = pList.sort(
         (a, b) => new Date(b.updateDate) - new Date(a.updateDate)
       );
       // update pList with relational-data
-      pList.forEach((product) => {        
+      pList.forEach((product) => {
         for (let i = 0; i < cList.length; i++) {
           if (product.categoryId == cList[i]._id) {
             product.category = cList[i].name;
