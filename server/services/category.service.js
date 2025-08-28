@@ -25,7 +25,6 @@ async function updateCategory(obj) {
     { _id: ObjectId.createFromHexString(id) },
     { $set: obj }
   );
-  console.log("Updated");
   return obj;
 }
 async function deleteCategory(id) {
