@@ -71,7 +71,7 @@ router.put("/", upload.any(), async (req, res, next) => {
     let id = obj._id;
     let result = await ProductService.updateProduct(obj);
     if (result.modifiedCount == 1) {
-      obj._id = id;
+      obj._id = id;//?
       res.status(200).json(obj);
     }
   } catch (error) {

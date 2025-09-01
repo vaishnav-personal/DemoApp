@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const CategoryService = require("../services/category.service");
-const multer = require("multer");
+const multer = require("multer");//file uploads
 // const upload = multer({ dest: "uploads/" });
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {

@@ -50,6 +50,7 @@ app.post("/api/upload", multiUpload, (req, res) => {
   });
 });
 
+
 // Serve uploaded files
 app.use("/uploads", express.static("uploads"));
 

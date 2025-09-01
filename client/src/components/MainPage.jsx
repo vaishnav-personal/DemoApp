@@ -6,6 +6,10 @@ import { BeatLoader } from "react-spinners";
 import AdminManageMenus from "./AdminManageMenus";
 import AdminSettingMenus from "./AdminSettingMenus";
 import AdminReportMenus from "./AdminReportMenus";
+import EVTracker from "./evTracker";
+import { useNavigate } from "react-router-dom";
+
+
 export default function MainPage() {
   let [selectedEntity, setSelectedEntity] = useState("");
   let [user, setUser] = useState("");
@@ -14,6 +18,7 @@ export default function MainPage() {
   let [selectedMenuIndex, setSelectedMenuIndex] = useState(-1);
   let [selectedEntityIndex, setSelectedEntityIndex] = useState(-1);
   let [flagCheckSession, setFlagCheckSession] = useState(false);
+
   let adminMenus = [];
   adminMenus.push(AdminManageMenus);
   adminMenus.push(AdminSettingMenus);
@@ -21,6 +26,34 @@ export default function MainPage() {
   useEffect(() => {
     checkSessionExists();
   }, []);
+  const navigate = useNavigate();   // ✅ hook for navigation
+
+  // 👇 function to navigate
+  function handleStartTracking() {
+   // 1. Detect current location
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+
+      // 2. Fetch nearby EV stations
+      const url = `${import.meta.env.VITE_API_URL}/api/ev/nearby?lat=${lat}&lng=${lng}&radius=6000&limit=8`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const stations = data.candidates || [];
+
+      // 3. Pick nearest
+      const nearest = [...stations].sort((a, b) => {
+        const da = a.road_distance_m ?? a.straight_distance_m ?? Infinity;
+        const db = b.road_distance_m ?? b.straight_distance_m ?? Infinity;
+        return da - db;
+      })[0];
+
+      // 4. Pass all data to /map page
+      navigate("/map", {
+        state: { origin: { lat, lng }, stations, nearest },
+      });
+    });
+  }
   async function checkSessionExists() {
     setFlagCheckSession(true);
     try {
@@ -100,6 +133,9 @@ export default function MainPage() {
       </div>
     );
   }
+  
+
+
   return (
     <>
       {message && (
@@ -127,12 +163,25 @@ export default function MainPage() {
               )}
               {user && (
                 <button
-                  className="btn btn-outline-danger btn-lg px-4 shadow-sm"
-                  onClick={handleSignoutClick}
+                  className="btn btn-outline-danger btn-lg px-4 shadow-sm m-2"
+                  onClick={handleSignoutClick }
                 >
                   Signout
-                </button>
+                </button> 
+                
               )}
+                {user && (
+                <>
+                  
+                  <button
+                    className="btn btn-success btn-lg px-4 shadow-sm m-2"
+                    onClick={handleStartTracking}
+                  >
+                    Start Tracking
+                  </button>
+                </>
+              )}
+              
             </div>
             <ul className="list-unstyled text-start">
               {adminMenus.map((menu, menuIndex) => (

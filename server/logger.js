@@ -1,6 +1,6 @@
-const path = require("path");
-const winston = require("winston");
-const DailyRotateFile = require("winston-daily-rotate-file");
+const path = require("path");//It provides utilities for working with file and directory paths.
+const winston = require("winston");//logging libraries for Node.js.
+const DailyRotateFile = require("winston-daily-rotate-file");//It automatically rotates log files daily (or by size).
 
 const logFormat = winston.format.printf(({ level, message }) => {
   const istTime = new Date().toLocaleString("en-IN", {

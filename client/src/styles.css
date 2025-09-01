@@ -1,0 +1,185 @@
+/* ===== GLOBAL BASE ===== */
+:root {
+  --primary: #0d6efd;
+  --secondary: #6c757d;
+  --danger: #dc3545;
+  --success: #28a745;
+  --light: #f8f9fa;
+  --dark: #212529;
+  --radius: 12px;
+  --shadow-sm: 0 2px 6px rgba(0,0,0,0.08);
+  --shadow-lg: 0 6px 18px rgba(0,0,0,0.12);
+}
+
+body {
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  background: var(--light);
+  color: var(--dark);
+  margin: 0;
+  padding: 0;
+}
+
+h1,h2,h3,h4,h5,h6 {
+  font-weight: 600;
+  color: var(--dark);
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+/* ===== CONTAINERS & CARDS ===== */
+.container, .bg-white, .card {
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.shadow-sm { box-shadow: var(--shadow-sm) !important; }
+.shadow-lg { box-shadow: var(--shadow-lg) !important; }
+
+.bg-gradient-primary-light {
+  background: linear-gradient(135deg, #e3f2fd, #f8f9fc);
+}
+
+/* ===== BUTTONS ===== */
+.btn {
+  border-radius: 8px !important;
+  font-weight: 500;
+  transition: all 0.25s ease-in-out;
+}
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #007bff, #0056d2);
+  border: none;
+}
+.btn-outline-primary {
+  border: 2px solid var(--primary) !important;
+  color: var(--primary);
+}
+.btn-outline-primary:hover { background: var(--primary); color: #fff; }
+.btn-outline-danger {
+  border: 2px solid var(--danger) !important;
+  color: var(--danger);
+}
+.btn-outline-danger:hover { background: var(--danger); color: #fff; }
+.btn-outline-secondary {
+  border: 2px solid var(--secondary) !important;
+  color: var(--secondary);
+}
+.btn-outline-secondary:hover { background: var(--secondary); color: #fff; }
+
+/* ===== SIDEBAR & MENUS ===== */
+.menu-btn-hover {
+  transition: all 0.25s ease;
+}
+.menu-btn-hover:hover {
+  background: #f1f5ff;
+  border-color: var(--primary) !important;
+  color: var(--primary);
+}
+.list-unstyled button { border-radius: 6px !important; }
+
+/* ===== EV TRACKER ===== */
+.ev-tracker {
+  background: #fff;
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.ev-tracker h4 { color: var(--primary); }
+.ev-tracker li {
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+
+/* ===== FORMS ===== */
+.form-control, select, textarea {
+  border-radius: 8px !important;
+  border: 1px solid #ccc;
+  transition: all 0.2s;
+}
+.form-control:focus, select:focus, textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.15);
+}
+
+/* ===== PRODUCT FORM / FILE UPLOAD ===== */
+input[type="file"] {
+  border: 1px dashed #bbb;
+  padding: 8px;
+  border-radius: 8px;
+  background: #fafafa;
+}
+.img-thumbnail {
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ===== TABLES / LISTS ===== */
+.entity-card, .row.border {
+  border-radius: 8px;
+  background: #fff;
+  transition: all 0.2s;
+}
+.entity-card:hover, .row.border:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+.table, .row {
+  margin-bottom: 10px;
+}
+.row > div { display: flex; align-items: center; }
+
+/* ===== REPORTS & PDF VIEWER ===== */
+.container-list-table {
+  background: #fff;
+  padding: 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+pre {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  overflow-x: auto;
+}
+
+.pdf-container {
+  border: 1px solid #ddd;
+  border-radius: var(--radius);
+  padding: 12px;
+  background: #fff;
+}
+.pdf-container canvas {
+  border-radius: 8px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ===== INFO HEADER ===== */
+.container.fixed-top {
+  box-shadow: var(--shadow-sm);
+  background: #fff !important;
+}
+
+/* ===== RESOURCES / REMARKS ===== */
+.enquiry-remarks textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  padding: 10px;
+}
+.enquiry-remarks button { margin-top: 8px; }
+
+/* ===== ANIMATIONS ===== */
+.animate__fadeInDown, .animate__fadeInLeft, .animate__pulse {
+  animation-duration: 0.6s;
+}

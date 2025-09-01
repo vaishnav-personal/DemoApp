@@ -20,6 +20,15 @@ let AdminManageMenus = {
       isReady: true,
       accessLevel: "A",
     },
+    {
+      name: "Customers",
+      singularName: "Customer",
+      addFacility: true,
+      deleteFacility: true,
+      editFacility: true,
+      isReady: true,
+      accessLevel: "A",
+    },
   ],
 };
 export default AdminManageMenus;
