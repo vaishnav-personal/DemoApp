@@ -16,7 +16,6 @@ async function getUserById(id) {
   const userObj = await collection.findOne({
     _id: ObjectId.createFromHexString(id),
   });
-  // console.log("Found document is =>", userObj);
   return userObj;
 
   // let obj = await User.findById(id);
