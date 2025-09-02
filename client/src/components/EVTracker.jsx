@@ -1,35 +1,19 @@
 // src/components/EVTracker.jsx
 import React, { useEffect, useRef, useState } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  Polyline,
-} from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import { useNavigate } from "react-router-dom";
-const POLL_MS = 5000; // update every 5s
+import EVMap from "./EVMap";   // ⬅️ Import Map
 
-// fix missing default icon in React-Leaflet
-import iconUrl from "leaflet/dist/images/marker-icon.png";
-import iconShadow from "leaflet/dist/images/marker-shadow.png";
-const DefaultIcon = L.icon({ iconUrl, shadowUrl: iconShadow });
-L.Marker.prototype.options.icon = DefaultIcon;
+const POLL_MS = 5000;
 
 export default function EVTracker() {
   const [status, setStatus] = useState("Click to start");
-  const [origin, setOrigin] = useState(null); // {lat,lng}
-  const [nearest, setNearest] = useState(null); // best station with time
-  const [list, setList] = useState([]); // returned shortlist
+  const [origin, setOrigin] = useState(null);
+  const [nearest, setNearest] = useState(null);
+  const [list, setList] = useState([]);
   const timerRef = useRef(null);
 
   const fetchNearby = async (lat, lng) => {
     setStatus("Fetching nearby stations…");
-    const url = `${
-      import.meta.env.VITE_API_URL
-    }/api/ev/nearby?lat=${lat}&lng=${lng}&radius=6000&limit=8`;
+    const url = `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/api/ev/nearby?lat=${lat}&lng=${lng}&radius=6000&limit=6`;
     const res = await fetch(url);
     if (!res.ok) throw new Error("Backend error");
     return res.json();
@@ -45,15 +29,16 @@ export default function EVTracker() {
             setOrigin({ lat, lng });
 
             const data = await fetchNearby(lat, lng);
-            setList(data.candidates || []);
-
-            const best = [...(data.candidates || [])].sort((a, b) => {
+            setList(data.candidates);
+            
+            const best = [...(data.candidates )].sort((a, b) => {
               const da = a.road_distance_m ?? a.straight_distance_m ?? Infinity;
               const db = b.road_distance_m ?? b.straight_distance_m ?? Infinity;
               return da - db;
             })[0];
-
-            setNearest(best || null);
+            
+            setNearest(best);
+            
             setStatus("Live");
           } catch (e) {
             console.error(e);
@@ -72,16 +57,10 @@ export default function EVTracker() {
   };
 
   const start = async () => {
-    console.log("Navigating with:", { origin, list, nearest });
-    navigate("/map", {
-      state: {
-        origin, // {lat, lng}
-        stations: list, // 👈 must be list from fetchNearby
-        nearest,
-      },
-    });
     if (!("geolocation" in navigator)) {
       setStatus("Geolocation not supported");
+      console.log("here")
+      {list}
       return;
     }
     setStatus("Starting…");
@@ -117,92 +96,21 @@ export default function EVTracker() {
         <strong>Status:</strong> {status}
       </div>
 
-      {/* Map Section */}
-      <div style={{ height: "400px", width: "100%", marginBottom: "20px" }}>
-        <MapContainer
-          center={origin ? [origin.lat, origin.lng] : [20.5937, 78.9629]}
-          zoom={origin ? 14 : 5}
-          style={{ height: "100%", width: "100%" }}
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap contributors"
-          />
-
-          {/* User marker */}
-          {origin && (
-            <Marker position={[origin.lat, origin.lng]}>
-              <Popup>You are here</Popup>
-            </Marker>
-          )}
-
-          {/* Nearest station marker */}
-          {nearest && (
-            <Marker position={[nearest.lat, nearest.lng]}>
-              <Popup>
-                <strong>{nearest.name}</strong>
-                <br />
-                Road: {fmtKm(nearest.road_distance_m)} <br />
-                ETA: {fmtMin(nearest.duration_s)}
-              </Popup>
-            </Marker>
-          )}
-
-          {/* Other station markers */}
-          {list.map((s) => (
-            <Marker key={s.id} position={[s.lat, s.lng]}>
-              <Popup>
-                {s.name} <br />
-                {fmtKm(s.road_distance_m)} / {fmtMin(s.duration_s)}
-              </Popup>
-            </Marker>
-          ))}
-
-          {/* Optional: Draw line from user to nearest */}
-          {origin && nearest && (
-            <Polyline
-              positions={[
-                [origin.lat, origin.lng],
-                [nearest.lat, nearest.lng],
-              ]}
-            />
-          )}
-        </MapContainer>
-      </div>
-
-      {/* Info Section */}
-      {origin && (
-        <div className="mb-3">
-          <strong>Your location:</strong> {origin.lat.toFixed(5)},{" "}
-          {origin.lng.toFixed(5)}
-        </div>
-      )}
+      {/* ✅ Show Map */}
+      
+    <EVMap origin={origin} stations={list} nearest={nearest} />
 
       {nearest && (
-        <div className="mb-4">
+        <div className="mb-4 mt-3">
           <h4>Nearest EV station</h4>
           <div>
-            <div>
-              <strong>{nearest.name}</strong>
-            </div>
-            <div>
-              Coords: {nearest.lat.toFixed(5)}, {nearest.lng.toFixed(5)}
-            </div>
+            <div><strong>{nearest.name}</strong></div>
+            <div>Coords: {nearest.lat.toFixed(5)}, {nearest.lng.toFixed(5)}</div>
             <div>Road distance: {fmtKm(nearest.road_distance_m)}</div>
             <div>ETA: {fmtMin(nearest.duration_s)}</div>
-            <div>As-the-crow-flies: {fmtKm(nearest.straight_distance_m)}</div>
           </div>
         </div>
       )}
-
-      <h5>Shortlist (top by proximity)</h5>
-      <ul>
-        {list.map((s) => (
-          <li key={s.id}>
-            {s.name} — {fmtKm(s.road_distance_m)} ({fmtMin(s.duration_s)})
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

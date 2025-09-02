@@ -37,8 +37,10 @@ export default function MainPage() {
 
       // 2. Fetch nearby EV stations
       const url = `${import.meta.env.VITE_API_URL}/api/ev/nearby?lat=${lat}&lng=${lng}&radius=6000&limit=8`;
+      console.log(url);
       const res = await fetch(url);
       const data = await res.json();
+      console.log(data);
       const stations = data.candidates || [];
 
       // 3. Pick nearest
@@ -60,6 +62,8 @@ export default function MainPage() {
       let response = await axios.get(
         import.meta.env.VITE_API_URL + "/users/hello"
       );
+      console.log("done");
+      
       response = response.data;
       setFlagCheckSession(false);
       if (!response) {

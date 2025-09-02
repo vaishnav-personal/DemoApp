@@ -1,11 +1,17 @@
 import "./App.css";
 import "../src/styles.css";
-import EVMapPage from "./components/EVMapPage";  // renamed for clarity
+
 import MainPage from "./components/MainPage";
 import axios from "axios";
+;
+import "mapbox-gl/dist/mapbox-gl.css";
+import "@mapbox/mapbox-gl-directions/dist/mapbox-gl-directions.css";
+
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import { useIsMobile } from "./external/vite-sdk";
 import TrialPage from "./components/TrialPage";
+import EVTracker from "./components/evTracker";
+
 
 function App() {
   axios.defaults.withCredentials = true; // keep cookies
@@ -17,7 +23,7 @@ function App() {
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/trial" element={<TrialPage />} />
-        <Route path="/map" element={<EVMapPage />} /> {/* ✅ renamed */}
+        <Route path="/map" element={<EVTracker />} />
       </Routes>
     </Router>
   );

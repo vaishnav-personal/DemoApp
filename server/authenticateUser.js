@@ -1,8 +1,11 @@
 const jwt = require("jsonwebtoken");
 module.exports = function autheticateUser(req, res, next) {
   const token = req.cookies.token;
+
+  
   if (!token) {
     // This is guest
+  
     req.role = "guest";
     next();
     return; /*Important */
@@ -25,6 +28,7 @@ module.exports = function autheticateUser(req, res, next) {
     }
     // token seems to be of valid logged-in user
     req.tokenData = tokenData; // Attach user info to request
+      
     next();
   });
 };
