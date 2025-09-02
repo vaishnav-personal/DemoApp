@@ -1,30 +1,47 @@
+// src/components/EVMap.jsx
 import React, { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
-const EVMap = ({ origin, stations = [], nearest }) => {
+const EVMap = ({ origin, stations = [], setList }) => {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
-  const markersRef = useRef([]);
 
   // Initialize map once
   useEffect(() => {
-    if (!mapContainerRef.current) return;
-
     mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: "mapbox://styles/mapbox/streets-v11",
-      center: [77.5946, 12.9716], // default: Bangalore
-      zoom: 12,
+      center: origin ? [origin.lng, origin.lat] : [77.5946, 12.9716],
     });
 
     mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
 
+    // Add new station on click
+    mapRef.current.on("click", async (e) => {
+      const lng = e.lngLat.lng;
+      const lat = e.lngLat.lat;
+      const name = prompt("Enter station name:");
+      if (!name) return;
+
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/api/ev/stations`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, lat, lng }),
+        }
+      );
+      const newStation = await res.json();
+      setList((prev) => [...prev, newStation]);
+    });
+
+    // Cleanup
     return () => mapRef.current?.remove();
   }, []);
 
-  // Recenter on user location
+  // Fly to user location when origin updates
   useEffect(() => {
     if (origin && mapRef.current) {
       mapRef.current.flyTo({
@@ -35,79 +52,45 @@ const EVMap = ({ origin, stations = [], nearest }) => {
     }
   }, [origin]);
 
-  // Update markers
+  // Render markers
   useEffect(() => {
     if (!mapRef.current) return;
 
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
+    // clear old markers
+    document.querySelectorAll(".mapboxgl-marker").forEach((el) => el.remove());
 
+    // User marker
     if (origin) {
-      const userMarker = new mapboxgl.Marker({ color: "red" })
+      new mapboxgl.Marker({ color: "red" })
         .setLngLat([origin.lng, origin.lat])
         .setPopup(new mapboxgl.Popup().setText("You are here"))
         .addTo(mapRef.current);
-      markersRef.current.push(userMarker);
     }
 
-    stations.forEach((station) => {
-      const stMarker = new mapboxgl.Marker({ color: "green" })
-        .setLngLat([station.lng, station.lat])
+    // Stations
+    stations.forEach((s) => {
+      new mapboxgl.Marker({ color: "green" })
+        .setLngLat([s.lng, s.lat])
         .setPopup(
           new mapboxgl.Popup().setHTML(`
             <div>
-              <strong>${station.name}</strong><br/>
-              Distance: ${
-                station.road_distance_m
-                  ? (station.road_distance_m / 1000).toFixed(2) + " km"
-                  : "—"
-              }
+              <strong>${s.name}</strong><br/>
+              <button onclick="deleteStation(${s.id})">Delete</button>
             </div>
           `)
         )
         .addTo(mapRef.current);
-      markersRef.current.push(stMarker);
     });
-  }, [origin, stations]);
+  }, [stations, origin]);
 
-  // Update route
-  useEffect(() => {
-    async function drawRoute(origin, nearest) {
-      if (!origin || !nearest || !mapRef.current) return;
-
-      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${origin.lng},${origin.lat};${nearest.lng},${nearest.lat}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      const route = data.routes[0].geometry;
-
-      const map = mapRef.current;
-
-      if (map.getSource("route")) {
-        map.getSource("route").setData({
-          type: "Feature",
-          geometry: route,
-        });
-      } else {
-        map.addSource("route", {
-          type: "geojson",
-          data: {
-            type: "Feature",
-            geometry: route,
-          },
-        });
-
-        map.addLayer({
-          id: "route",
-          type: "line",
-          source: "route",
-          layout: { "line-join": "round", "line-cap": "round" },
-          paint: { "line-color": "#3b82f6", "line-width": 5 },
-        });
-      }
-    }
-
-    drawRoute(origin, nearest);
-  }, [origin, nearest]);
+  // Delete station (bind to window for demo)
+  window.deleteStation = async (id) => {
+    await fetch(
+      `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/api/ev/stations/${id}`,
+      { method: "DELETE" }
+    );
+    setList((prev) => prev.filter((s) => s.id !== id));
+  };
 
   return <div ref={mapContainerRef} style={{ height: "70vh", width: "100%" }} />;
 };

@@ -18,7 +18,7 @@ export default function MainPage() {
   let [selectedMenuIndex, setSelectedMenuIndex] = useState(-1);
   let [selectedEntityIndex, setSelectedEntityIndex] = useState(-1);
   let [flagCheckSession, setFlagCheckSession] = useState(false);
-
+  let [list,setList]=useState([]);
   let adminMenus = [];
   adminMenus.push(AdminManageMenus);
   adminMenus.push(AdminSettingMenus);
@@ -29,33 +29,63 @@ export default function MainPage() {
   const navigate = useNavigate();   // ✅ hook for navigation
 
   // 👇 function to navigate
-  function handleStartTracking() {
+   function handleStartTracking() {
    // 1. Detect current location
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        console.log("User location:", lat, lng);
 
       // 2. Fetch nearby EV stations
-      const url = `${import.meta.env.VITE_API_URL}/api/ev/nearby?lat=${lat}&lng=${lng}&radius=6000&limit=8`;
-      console.log(url);
-      const res = await fetch(url);
-      const data = await res.json();
-      console.log(data);
-      const stations = data.candidates || [];
+      // const url = `${import.meta.env.VITE_API_URL}/api/ev/nearby?lat=${lat}&lng=${lng}&radius=6000&limit=8`;
+      // console.log(url);
+      // const res = await fetch(url);
+      // const data = await res.json();
+      // console.log(data);
+      // const stations = data.candidates || [];
+      
+         try {
+          const res = await fetch(
+            `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/api/ev/stations`
+          );
+          const stations = await res.json();
+          setList(stations);
+          //3.find nearest
 
-      // 3. Pick nearest
-      const nearest = [...stations].sort((a, b) => {
-        const da = a.road_distance_m ?? a.straight_distance_m ?? Infinity;
-        const db = b.road_distance_m ?? b.straight_distance_m ?? Infinity;
-        return da - db;
-      })[0];
+      const toRad = (x) => (x * Math.PI) / 180;
+          const haversine = (aLat, aLng, bLat, bLng) => {
+            const R = 6371e3;
+            const dLat = toRad(bLat - aLat);
+            const dLng = toRad(bLng - aLng);
+            const A =
+              Math.sin(dLat / 2) ** 2 +
+              Math.cos(toRad(aLat)) *
+                Math.cos(toRad(bLat)) *
+                Math.sin(dLng / 2) ** 2;
+            return 2 * R * Math.atan2(Math.sqrt(A), Math.sqrt(1 - A));
+          };
+          const nearest = [...stations].sort(
+            (a, b) =>
+              haversine(lat, lng, a.lat, a.lng) -
+              haversine(lat, lng, b.lat, b.lng)
+          )[0];
 
       // 4. Pass all data to /map page
       navigate("/map", {
-        state: { origin: { lat, lng }, stations, nearest },
-      });
-    });
-  }
+            state: { origin: { lat, lng }, list: stations, nearest },
+          });
+        } catch (err) {
+          console.error("Error fetching stations:", err);
+        }
+    },
+    (err) => {
+        console.error("Location error:", err);
+        alert("Unable to detect location");
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
   async function checkSessionExists() {
     setFlagCheckSession(true);
     try {

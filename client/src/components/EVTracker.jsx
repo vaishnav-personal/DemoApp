@@ -11,14 +11,26 @@ export default function EVTracker() {
   const [list, setList] = useState([]);
   const timerRef = useRef(null);
 
-  const fetchNearby = async (lat, lng) => {
-    setStatus("Fetching nearby stations…");
-    const url = `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/api/ev/nearby?lat=${lat}&lng=${lng}&radius=6000&limit=6`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Backend error");
-    return res.json();
-  };
 
+  //not by overpass api
+  // const fetchNearby = async (lat, lng) => {
+  //   setStatus("Fetching nearby stations…");
+  //   const url = `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/api/ev/nearby?lat=${lat}&lng=${lng}&radius=6000&limit=6`;
+  //   const res = await fetch(url);
+  //   if (!res.ok) throw new Error("Backend error");
+  //   return res.json();
+  // };
+  // -----------------------------------
+  // fetch stations on mount
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3002"}/api/ev/stations`)
+      .then((res) => res.json())
+      .then(setList)
+      .catch(console.error);
+  }, []);
+
+
+  // get user location  
   const tick = async () => {
     return new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
@@ -38,7 +50,6 @@ export default function EVTracker() {
             })[0];
             
             setNearest(best);
-            
             setStatus("Live");
           } catch (e) {
             console.error(e);
@@ -59,8 +70,6 @@ export default function EVTracker() {
   const start = async () => {
     if (!("geolocation" in navigator)) {
       setStatus("Geolocation not supported");
-      console.log("here")
-      {list}
       return;
     }
     setStatus("Starting…");
@@ -96,10 +105,11 @@ export default function EVTracker() {
         <strong>Status:</strong> {status}
       </div>
 
-      {/* ✅ Show Map */}
-      
-    <EVMap origin={origin} stations={list} nearest={nearest} />
+      {/* ✅ Show Map by overpass*/}
+    {/* <EVMap origin={origin} stations={list} nearest={nearest} /> */}
 
+    {/* show by backend */}
+    <EVMap origin={origin} stations={list} setList={setList} />
       {nearest && (
         <div className="mb-4 mt-3">
           <h4>Nearest EV station</h4>
