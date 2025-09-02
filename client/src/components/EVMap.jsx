@@ -1,52 +1,57 @@
-// src/components/EVMap.jsx
 import React, { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
-import MapboxDirections from "@mapbox/mapbox-gl-directions/dist/mapbox-gl-directions";
 
-// ✅ CSS imports (make sure you also import in main.jsx or App.jsx)
-import "mapbox-gl/dist/mapbox-gl.css";
-import "@mapbox/mapbox-gl-directions/dist/mapbox-gl-directions.css";
-
-// Set token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 const EVMap = ({ origin, stations = [], nearest }) => {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
+  const markersRef = useRef([]);
 
+  // Initialize map once
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Initialize map
     mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: "mapbox://styles/mapbox/streets-v11",
-      center: [origin?.lng || 77.5946, origin?.lat || 12.9716],
+      center: [77.5946, 12.9716], // default: Bangalore
       zoom: 12,
     });
 
-    // Add navigation controls
     mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
 
-    // Add directions control
-    const directions = new MapboxDirections({
-      accessToken: mapboxgl.accessToken,
-      unit: "metric",
-      profile: "mapbox/driving",
-    });
-    mapRef.current.addControl(directions, "top-left");
+    return () => mapRef.current?.remove();
+  }, []);
 
-    // Add origin marker
+  // Recenter on user location
+  useEffect(() => {
+    if (origin && mapRef.current) {
+      mapRef.current.flyTo({
+        center: [origin.lng, origin.lat],
+        zoom: 14,
+        essential: true,
+      });
+    }
+  }, [origin]);
+
+  // Update markers
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
+
     if (origin) {
-      new mapboxgl.Marker({ color: "red" })
+      const userMarker = new mapboxgl.Marker({ color: "red" })
         .setLngLat([origin.lng, origin.lat])
         .setPopup(new mapboxgl.Popup().setText("You are here"))
         .addTo(mapRef.current);
+      markersRef.current.push(userMarker);
     }
 
-    // Add station markers
     stations.forEach((station) => {
-      new mapboxgl.Marker({ color: "green" })
+      const stMarker = new mapboxgl.Marker({ color: "green" })
         .setLngLat([station.lng, station.lat])
         .setPopup(
           new mapboxgl.Popup().setHTML(`
@@ -61,19 +66,48 @@ const EVMap = ({ origin, stations = [], nearest }) => {
           `)
         )
         .addTo(mapRef.current);
+      markersRef.current.push(stMarker);
     });
+  }, [origin, stations]);
 
-    // Auto route to nearest
-    if (origin && nearest) {
-      directions.setOrigin([origin.lng, origin.lat]);
-      directions.setDestination([nearest.lng, nearest.lat]);
+  // Update route
+  useEffect(() => {
+    async function drawRoute(origin, nearest) {
+      if (!origin || !nearest || !mapRef.current) return;
+
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${origin.lng},${origin.lat};${nearest.lng},${nearest.lat}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const route = data.routes[0].geometry;
+
+      const map = mapRef.current;
+
+      if (map.getSource("route")) {
+        map.getSource("route").setData({
+          type: "Feature",
+          geometry: route,
+        });
+      } else {
+        map.addSource("route", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            geometry: route,
+          },
+        });
+
+        map.addLayer({
+          id: "route",
+          type: "line",
+          source: "route",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": "#3b82f6", "line-width": 5 },
+        });
+      }
     }
 
-    // Cleanup on unmount
-    return () => {
-      if (mapRef.current) mapRef.current.remove();
-    };
-  }, [origin, stations, nearest]);
+    drawRoute(origin, nearest);
+  }, [origin, nearest]);
 
   return <div ref={mapContainerRef} style={{ height: "70vh", width: "100%" }} />;
 };
