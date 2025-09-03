@@ -1,97 +1,107 @@
 // src/components/EVTracker.jsx
 import React, { useEffect, useRef, useState } from "react";
-import EVMap from "./EVMap";   // ⬅️ Import Map
+import EVMap from "./EVMap";
 
 const POLL_MS = 5000;
 
 export default function EVTracker() {
-  const [status, setStatus] = useState("Click to start");
-  const [origin, setOrigin] = useState(null);
-  const [nearest, setNearest] = useState(null);
-  const [list, setList] = useState([]);
-  const timerRef = useRef(null);
+  const [status, setStatus] = useState("Idle");
+  const [origin, setOrigin] = useState(null); // user’s current location
+  const [stations, setStations] = useState([]); // stations near searched place
+  const [selected, setSelected] = useState(null); // station user clicks
+  const [searchResults, setSearchResults] = useState([]);
+  const [routeInfo, setRouteInfo] = useState(null);
+  const timerRef = useRef(null); // ✅ now defined properly
 
-
-  //not by overpass api
-  // const fetchNearby = async (lat, lng) => {
-  //   setStatus("Fetching nearby stations…");
-  //   const url = `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/api/ev/nearby?lat=${lat}&lng=${lng}&radius=6000&limit=6`;
-  //   const res = await fetch(url);
-  //   if (!res.ok) throw new Error("Backend error");
-  //   return res.json();
-  // };
-  // -----------------------------------
-  // fetch stations on mount
+  // ✅ Get user’s current location once
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3002"}/api/ev/stations`)
-      .then((res) => res.json())
-      .then(setList)
-      .catch(console.error);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      (err) => console.error("Location error:", err),
+      { enableHighAccuracy: true }
+    );
   }, []);
 
-
-  // get user location  
+  // ✅ Polling to keep updating user location
   const tick = async () => {
-    return new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          try {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            setOrigin({ lat, lng });
-
-            const data = await fetchNearby(lat, lng);
-            setList(data.candidates);
-            
-            const best = [...(data.candidates )].sort((a, b) => {
-              const da = a.road_distance_m ?? a.straight_distance_m ?? Infinity;
-              const db = b.road_distance_m ?? b.straight_distance_m ?? Infinity;
-              return da - db;
-            })[0];
-            
-            setNearest(best);
-            setStatus("Live");
-          } catch (e) {
-            console.error(e);
-            setStatus("Failed to fetch data");
-          }
-          resolve();
-        },
-        (err) => {
-          console.error(err);
-          setStatus(err.message || "Location error");
-          resolve();
-        },
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }
-      );
-    });
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      (err) => console.error("Location error:", err),
+      { enableHighAccuracy: true }
+    );
   };
 
-  const start = async () => {
+  const start = () => {
     if (!("geolocation" in navigator)) {
       setStatus("Geolocation not supported");
       return;
     }
-    setStatus("Starting…");
-    await tick();
+    setStatus("Tracking…");
+    tick();
     timerRef.current = setInterval(tick, POLL_MS);
   };
 
   const stop = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = null;
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     setStatus("Stopped");
   };
 
   useEffect(() => {
-    return () => stop();
+    return () => stop(); // cleanup on unmount
   }, []);
+
+  // ✅ Search places (Mapbox Geocoding API)
+  const handleSearch = async (e) => {
+    const query = e.target.value;
+    if (query.length < 3) {
+      setSearchResults([]);
+      return;
+    }
+
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+      query
+    )}.json?access_token=${import.meta.env.VITE_MAPBOX_TOKEN}&limit=5`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+    setSearchResults(data.features || []);
+  };
+
+  // ✅ When user selects a place → fetch nearby stations from backend
+  const handlePlaceSelect = async (place) => {
+    const [lng, lat] = place.center;
+
+    setStatus(`Searching stations near ${place.text}...`);
+
+    try {
+      const res = await fetch(
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:3002"
+        }/api/ev/stations?lat=${lat}&lng=${lng}&radius=5000`
+      );
+      const data = await res.json();
+      setStations(data);
+      setSearchResults([]); // hide search dropdown
+      setStatus(`Found ${data.length} stations near ${place.text}`);
+    } catch (err) {
+      console.error(err);
+      setStatus("Failed to fetch stations");
+    }
+  };
 
   const fmtKm = (m) => (m == null ? "—" : (m / 1000).toFixed(2) + " km");
   const fmtMin = (s) => (s == null ? "—" : Math.round(s / 60) + " min");
 
   return (
     <div className="p-4">
+      {/* Buttons */}
       <div className="mb-3">
         <button onClick={start} className="btn btn-primary me-2">
           Start Tracking
@@ -101,24 +111,74 @@ export default function EVTracker() {
         </button>
       </div>
 
+      {/* Search bar */}
+      <input
+        type="text"
+        placeholder="Search a place (e.g. Katraj Lake)"
+        className="form-control mb-2"
+        onKeyUp={handleSearch}
+      />
+
+      {/* Autocomplete dropdown */}
+      {searchResults.length > 0 && (
+        <ul className="list-group mb-3">
+          {searchResults.map((place) => (
+            <li
+              key={place.id}
+              className="list-group-item list-group-item-action"
+              style={{ cursor: "pointer" }}
+              onClick={() => handlePlaceSelect(place)}
+            >
+              {place.place_name}
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="mb-2">
         <strong>Status:</strong> {status}
       </div>
 
-      {/* ✅ Show Map by overpass*/}
-    {/* <EVMap origin={origin} stations={list} nearest={nearest} /> */}
+      {/* Map */}
+      <EVMap
+        origin={origin}
+        stations={stations}
+        nearest={selected}
+        setList={setStations}
+        onRouteData={setRouteInfo} // ✅ capture route info
+      />
 
-    {/* show by backend */}
-    <EVMap origin={origin} stations={list} setList={setList} />
-      {nearest && (
+      {/* Stations list */}
+      {stations.length > 0 && (
+        <div className="mt-3">
+          <h4>Stations near searched place</h4>
+          <ul className="list-group">
+            {stations.map((st) => (
+              <li
+                key={st.id}
+                className="list-group-item list-group-item-action"
+                style={{ cursor: "pointer" }}
+                onClick={() => setSelected(st)} // user clicks → route drawn
+              >
+                {st.name} ({st.lat.toFixed(4)}, {st.lng.toFixed(4)})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Info for selected station */}
+      {selected && routeInfo && (
         <div className="mb-4 mt-3">
-          <h4>Nearest EV station</h4>
+          <h4>Selected EV station</h4>
           <div>
-            <div><strong>{nearest.name}</strong></div>
-            <div>Coords: {nearest.lat.toFixed(5)}, {nearest.lng.toFixed(5)}</div>
-            <div>Road distance: {fmtKm(nearest.road_distance_m)}</div>
-            <div>ETA: {fmtMin(nearest.duration_s)}</div>
+            <strong>{selected.name}</strong>
           </div>
+          <div>
+            Coords: {selected.lat.toFixed(5)}, {selected.lng.toFixed(5)}
+          </div>
+          <div>Road distance: {(routeInfo.distance / 1000).toFixed(2)} km</div>
+          <div>ETA: {Math.round(routeInfo.duration / 60)} min</div>
         </div>
       )}
     </div>
