@@ -11,7 +11,7 @@ import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import { useIsMobile } from "./external/vite-sdk";
 import TrialPage from "./components/TrialPage";
 import EVTracker from "./components/evTracker";
-import SignupLoginOwner from "./components/SignupLoginOwner";
+import OwnerMain from "./components/OwnerMain";
 
 
 function App() {
@@ -25,7 +25,7 @@ function App() {
         <Route path="/" element={<MainPage />} />
         <Route path="/trial" element={<TrialPage />} />
         <Route path="/map" element={<EVTracker />} />
-        < Route path="/owner" element={<SignupLoginOwner/>}/>
+        < Route path="/owner" element={<OwnerMain/>}/>
       </Routes>
     </Router>
   );

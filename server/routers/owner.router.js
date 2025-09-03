@@ -145,6 +145,7 @@ router.post("/login", async (req, res, next) => {
         .json({ Owner: OwnerObj, message: "Logged in Successfully" });
     }
   } catch (error) {
+
     next(error); // Send error to middleware
   }
 });
@@ -172,7 +173,39 @@ router.delete("/:id", allowToAdminOnly, async (req, res, next) => {
     next(error); // Send error to middleware
   }
 });
+// ✅ Application form submit
+router.post("/application", authMiddleware, async (req, res) => {
+  const db = req.db;
+  const { stationName, location, documents } = req.body;
+
+  const result = await db.collection("OwnerApplication").findOneAndUpdate(
+    { _id: new ObjectId(req.userId) },
+    {
+      $set: {
+        application: { stationName, location, documents },
+        hasApplied: true,
+        status: "hold",
+      },
+    },
+    { returnDocument: "after" }
+  );
+
+  res.json({ message: "Application submitted", owner: result.value });
+});
 //================
+// ✅ Middleware
+function authMiddleware(req, res, next) {
+  try {
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ error: "Not authenticated" });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.id;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: "Invalid token" });
+  }
+}
+
 function allowToAdminOnly(req, res, next) {
   if (
     !req.tokenData ||

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const SignupLoginOwner = () => {
+const SignupLoginOwner = ({ onAuthSuccess }) => {
   const [mode, setMode] = useState("signup"); // "signup" or "login"
   const [formData, setFormData] = useState({
     name: "",
@@ -34,6 +34,7 @@ const SignupLoginOwner = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(formData),
+           credentials: "include", // ✅ keep session cookie
         }
       );
 
@@ -42,8 +43,10 @@ const SignupLoginOwner = () => {
       console.log(data);
       if (mode === "login") {
         alert("Login successful ✅");
+        onAuthSuccess?.(data);
       } else {
         alert("Signup successful ✅");
+        onAuthSuccess?.(data); 
       }
     } catch (err) {
       console.error(err);

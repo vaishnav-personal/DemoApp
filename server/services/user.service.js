@@ -3,9 +3,7 @@ const { ObjectId } = require("mongodb");
 
 async function getAllUsers() {
   const db = app.locals.db;
-
   const collection = db.collection("users");
-
   let list = await collection.find().toArray();
 
   return list;
