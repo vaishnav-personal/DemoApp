@@ -59,10 +59,7 @@ router.get("/byEmailId/:emailId", async (req, res, next) => {
     next(error); // Send error to middleware
   }
 });
-router.post(
-  "/",
-
-  allowToAdminOnly,
+router.post("/",allowToAdminOnly,
   upload.single("file"),
   async (req, res, next) => {
     try {

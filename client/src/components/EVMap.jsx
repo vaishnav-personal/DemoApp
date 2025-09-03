@@ -13,7 +13,8 @@ const EVMap = ({ origin, stations = [], setList }) => {
     mapRef.current = new mapboxgl.Map({
       container: mapContainerRef.current,
       style: "mapbox://styles/mapbox/streets-v11",
-      center: origin ? [origin.lng, origin.lat] : [77.5946, 12.9716],
+      center: origin ? [origin.lng, origin.lat] : [73.8652, 18.4575], // default Pune Katraj
+      zoom: 13,
     });
 
     mapRef.current.addControl(new mapboxgl.NavigationControl(), "top-right");
@@ -69,17 +70,34 @@ const EVMap = ({ origin, stations = [], setList }) => {
 
     // Stations
     stations.forEach((s) => {
-      new mapboxgl.Marker({ color: "green" })
+      const marker = new mapboxgl.Marker({ color: "green", draggable: true }) // draggable for update
         .setLngLat([s.lng, s.lat])
         .setPopup(
           new mapboxgl.Popup().setHTML(`
             <div>
               <strong>${s.name}</strong><br/>
+              <button onclick="editStation(${s.id})">Edit</button>
               <button onclick="deleteStation(${s.id})">Delete</button>
             </div>
           `)
         )
         .addTo(mapRef.current);
+
+      // Drag to update coords
+      marker.on("dragend", async () => {
+        const { lng, lat } = marker.getLngLat();
+        await fetch(
+          `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/api/ev/stations/${s.id}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...s, lat, lng }),
+          }
+        );
+        setList((prev) =>
+          prev.map((st) => (st.id === s.id ? { ...st, lat, lng } : st))
+        );
+      });
     });
   }, [stations, origin]);
 
@@ -92,6 +110,34 @@ const EVMap = ({ origin, stations = [], setList }) => {
     setList((prev) => prev.filter((s) => s.id !== id));
   };
 
+  // Edit station (bind to window for demo)
+  window.editStation = async (id) => {
+    const newName = prompt("Enter new station name:");
+    if (!newName) return;
+
+    const station = stations.find((s) => s.id === id);
+    if (!station) return;
+
+    await fetch(
+      `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/api/ev/stations/${id}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...station, name: newName }),
+      }
+    );
+
+    setList((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, name: newName } : s))
+    );
+  };
+  window.deleteStation = async (id) => {
+  await fetch(
+    `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/api/ev/stations/${id}`,
+    { method: "DELETE" }
+  );
+  setList((prev) => prev.filter((s) => s.id !== id));
+};
   return <div ref={mapContainerRef} style={{ height: "70vh", width: "100%" }} />;
 };
 
