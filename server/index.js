@@ -9,6 +9,7 @@ const axios = require("axios");
 const authenticateUser = require("./authenticateUser.js");
 const productRouter = require("./routers/product.router.js");
 const userRouter = require("./routers/user.router.js");
+const ownerRouter = require("./routers/owner.router.js");
 const categoryRouter = require("./routers/category.router.js");
 const customerRouter = require("./routers/customer.router.js");
 const fileRouter = require("./routers/file.router.js");
@@ -35,6 +36,7 @@ app.use(logActivity);
 
 app.use("/specials", specialRouter);
 app.use("/users", userRouter);
+app.use("/owner",ownerRouter);
 app.use("/products", checkAuthority, productRouter);
 app.use("/categories", checkAuthority, categoryRouter);
 app.use("/customers", checkAuthority, customerRouter);
