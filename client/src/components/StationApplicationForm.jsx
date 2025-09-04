@@ -1,4 +1,6 @@
+
 import React, { useState } from "react";
+import axios from "axios";
 
 const StationApplicationForm = ({ onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -15,11 +17,37 @@ const StationApplicationForm = ({ onSubmit }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // send to backend here (FormData for file upload)
-    console.log("Application submitted", formData);
-    onSubmit(); // tell parent
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    const data = new FormData();
+    data.append("stationName", formData.stationName);
+    data.append("location", formData.location);
+    if (formData.documents) {
+      data.append("documents", formData.documents);
+    }
+
+    const res = await axios.post(
+      `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/ownersetting/`,
+      data,
+      {
+        withCredentials: true, // ✅ send cookie for auth
+      }
+    );
+
+    console.log("Application submitted successfully:", res.data);
+    onSubmit(); // move parent to hold page
+  } catch (err) {
+    console.error("Error submitting application:", err.response?.data || err);
+    alert("Failed to submit application");
+  }
+};
+
+
+  const handleSkip = () => {
+    console.log("Application skipped — forcing hold state");
+    onSubmit(); // same as submitted → parent will show hold page
   };
 
   return (
@@ -55,11 +83,22 @@ const StationApplicationForm = ({ onSubmit }) => {
             required
           />
         </div>
-        <button type="submit" className="btn btn-success w-100">
-          Submit Application
-        </button>
+
+        <div className="d-flex gap-2">
+          <button type="submit" className="btn btn-success w-100">
+            Submit Application
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary w-100"
+            onClick={handleSkip}
+          >
+            Skip this,if already applied
+          </button>
+        </div>
       </form>
     </div>
   );
 };
+
 export default StationApplicationForm;

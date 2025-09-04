@@ -8,13 +8,6 @@ async function getAllOwners() {
   let list = await collection.find().toArray();
   return list;
 }
-async function getAllApplications() {
-  const db = app.locals.db;
-
-  const collection = db.collection("OwnerApplication");
-  let list = await collection.find().toArray();
-  return list;
-}
 
 async function getOwnerById(id) {
   const db = app.locals.db;
@@ -93,5 +86,4 @@ module.exports = OwnerService = {
   addOwner,
   updateOwner,
   deleteOwner,
-  getAllApplications
 };

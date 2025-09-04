@@ -5,6 +5,7 @@ const OwnerService = require("../services/owner.service");
 const multer = require("multer");
 const logger = require("../logger");
 const ms = require("ms");
+const { ObjectId } = require("mongodb");
 // const upload = multer({ dest: "uploads/" });
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -23,26 +24,57 @@ router.get("/", allowToAdminOnly, async (req, res) => {
     next(error); // Send error to middleware
   }
 });
-router.get("/hello", async (req, res, next) => {
-  const token = req.cookies.token;
+
+
+router.get("/hello", async (req, res) => {
   try {
+    const token = req.cookies.token;
     if (!token) {
-      res.status(200).json("");
-    } else {
-      jwt.verify(token, process.env.SECRET_KEY, (err, tokenData) => {
-        if (err) {
-          next(err);
-          return;
-        } else {
-          res.status(200).json(tokenData);
-        }
-      });
+      return res.status(401).json({ error: "Not authenticated" });
     }
-    // let list = await StudentService.getAllStudents();
+
+    let tokenData;
+    try {
+      tokenData = jwt.verify(token, process.env.SECRET_KEY || "dev_secret");
+    } catch (err) {
+      console.error("JWT verify failed:", err.message);
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    console.log("Decoded token in /hello:", tokenData);
+
+    const db = req.app.locals.db; // ✅ MongoClient database
+    if (!db) {
+      return res.status(500).json({ error: "Database not available" });
+    }
+
+    if (!tokenData._id) {
+      return res.status(400).json({ error: "Invalid token payload" });
+    }
+
+    let owner;
+    try {
+      owner = await db
+        .collection("StationOwners")
+        .findOne({ _id: new ObjectId(tokenData._id) }, { projection: { password: 0 } });
+    } catch (e) {
+      console.error("ObjectId conversion failed:", e.message);
+      return res.status(400).json({ error: "Invalid ObjectId" });
+    }
+
+    if (!owner) {
+      return res.status(404).json({ error: "Owner not found" });
+    }
+
+    res.status(200).json(owner);
   } catch (error) {
-    next(error); // Send error to middleware
+    console.error("Hello route error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+
+
 router.get("/:id", async (req, res, next) => {
   try {
     let id = req.params.id;
@@ -87,6 +119,9 @@ router.post("/signup", async (req, res, next) => {
     else {
       res.status(409).json({ error: "This emailid is already registered" });
     }
+    console.log("SECRET_KEY exists:", !!process.env.SECRET_KEY);
+console.log("JWT_EXPIRY:", process.env.JWT_EXPIRY);
+
   } catch (error) {
     //try
     next(error); // Send error to middleware
@@ -109,46 +144,46 @@ Use 404 if the thing they’re looking for doesn’t exist.
 Use 409 for duplicate/unique constraint errors.
 Use 422 for validation errors.
 */
-router.post("/login", async (req, res, next) => {
-  try {
-    let obj = req.body;
-    let OwnerObj = await OwnerService.checkOwnerTryingToLogIn(obj);
-    if (!OwnerObj) {
-      // No such Owner
-      res.status(409).json({ error: "Wrong emailId" });
-    } else if (OwnerObj.status == "disabled") {
-      res.status(403).json({ error: "Contact Admin." });
-    } else if (OwnerObj.password == "") {
-      //First time login by Owner, he/she needs to signup first
-      res.status(403).json({ error: "Signup First" });
-    } else if (OwnerObj.password != obj.password) {
-      // wrong password
-      res.status(403).json({ error: "Wrong password" });
-    } else if (OwnerObj.password === obj.password) {
-      // send Owner to client
-      OwnerObj.password = "...";
-      console.log(
-        "Logged in success.. " + OwnerObj.emailId + " " + OwnerObj.role
-      );
-      // if successful login, assign token
-      const token = jwt.sign(OwnerObj, process.env.SECRET_KEY, {
-        expiresIn: process.env.JWT_EXPIRY,
-      });
-      res.cookie("token", token, {
-        httpOnly: true,
-        secure: true, // Set to true in production with HTTPS
-        sameSite: "Lax",
-        maxAge: ms(process.env.JWT_EXPIRY),
-      });
-      res
-        .status(201)
-        .json({ Owner: OwnerObj, message: "Logged in Successfully" });
-    }
-  } catch (error) {
 
-    next(error); // Send error to middleware
+// ================== LOGIN ==================
+router.post("/login", async (req, res) => {
+  try {
+    const { emailId, password } = req.body;
+    const db = req.db || req.app.locals.db;
+
+    const OwnerObj = await OwnerService.checkOwnerTryingToLogIn({ emailId });
+    if (!OwnerObj) return res.status(401).json({ error: "Wrong emailId" });
+    if (OwnerObj.password !== password) return res.status(401).json({ error: "Wrong password" });
+    // let settingsOwner={};
+    // settingsOwner.state="noSubmission";
+
+    const token = jwt.sign(
+  { _id: OwnerObj._id.toString(), role: OwnerObj.role },
+  process.env.SECRET_KEY || "dev_secret",
+  { expiresIn: process.env.JWT_EXPIRY || "1h" }
+);
+
+    console.log("SECRET_KEY exists:", !!process.env.SECRET_KEY);
+console.log("JWT_EXPIRY:", process.env.JWT_EXPIRY);
+
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: false, // set true only in production HTTPS
+      sameSite: "Lax",
+      maxAge: ms(process.env.JWT_EXPIRY || "1d"),
+    });
+
+    res.status(200).json({
+      message: "Logged in successfully",
+      owner: { ...OwnerObj, password: undefined },
+    });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 router.put(
   "/",
   allowToAdminOnly,
@@ -173,38 +208,11 @@ router.delete("/:id", allowToAdminOnly, async (req, res, next) => {
     next(error); // Send error to middleware
   }
 });
-// ✅ Application form submit
-router.post("/application", authMiddleware, async (req, res) => {
-  const db = req.db;
-  const { stationName, location, documents } = req.body;
 
-  const result = await db.collection("OwnerApplication").findOneAndUpdate(
-    { _id: new ObjectId(req.userId) },
-    {
-      $set: {
-        application: { stationName, location, documents },
-        hasApplied: true,
-        status: "hold",
-      },
-    },
-    { returnDocument: "after" }
-  );
 
-  res.json({ message: "Application submitted", owner: result.value });
-});
-//================
-// ✅ Middleware
-function authMiddleware(req, res, next) {
-  try {
-    const token = req.cookies.token;
-    if (!token) return res.status(401).json({ error: "Not authenticated" });
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.userId = decoded.id;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: "Invalid token" });
-  }
-}
+
+
+
 
 function allowToAdminOnly(req, res, next) {
   if (

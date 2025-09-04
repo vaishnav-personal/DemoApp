@@ -8,39 +8,44 @@ const OwnerMain = () => {
   const [owner, setOwner] = useState(null);
 
   // Check owner session + status
-  useEffect(() => {
-    const fetchOwner = async () => {
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/owner/hello`,
-          { credentials: "include" }
-        );
+useEffect(() => {
+  const fetchOwner = async () => {
+    try {
+      const res = await  fetch(
+  `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/owner/hello`,
+  { credentials: "include" }   // ✅ important
+);
 
-        if (!res.ok) {
-          setStep("auth");
-          return;
-        }
-
-        const data = await res.json();
-        setOwner(data);
-
-        if (!data.hasApplied) {
-          setStep("application"); // must fill form
-        } else if (data.status === "hold") {
-          setStep("hold"); // waiting for admin approval
-        } else if (data.status === "approved") {
-          setStep("dashboard"); // approved users go to dashboard
-        } else {
-          setStep("application"); // fallback
-        }
-      } catch (err) {
-        console.error("Error fetching owner:", err);
-        setStep("auth");
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("Hello API failed:", res.status, errText);
+        setStep("auth"); // fallback
+        throw new Error("Auth failed");
+        return;
       }
-    };
 
-    fetchOwner();
-  }, []);
+      const data = await res.json();
+      console.log("Hello API success:", data); // 👀 debug
+
+      setOwner(data);
+
+      if (!data.hasApplied) {
+        setStep("application");
+      } else if (data.status === "hold") {
+        setStep("hold");
+      } else if (data.status === "approved") {
+        setStep("dashboard");
+      } else {
+        setStep("application");
+      }
+    } catch (err) {
+      console.error("Error fetching owner:", err);
+      setStep("auth");
+    }
+  };
+
+  fetchOwner();
+}, []);
 
   // After login/signup → re-run check
   const handleAuthSuccess = () => {
