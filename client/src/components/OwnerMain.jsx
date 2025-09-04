@@ -11,10 +11,10 @@ const OwnerMain = () => {
 useEffect(() => {
   const fetchOwner = async () => {
     try {
-      const res = await  fetch(
-  `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/owner/hello`,
-  { credentials: "include" }   // ✅ important
-);
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/owner/hello`,
+        { credentials: "include" }
+      );
 
       if (!res.ok) {
         const errText = await res.text();

@@ -1,6 +1,6 @@
-
 import React, { useState } from "react";
 import axios from "axios";
+import emailjs from "emailjs-com";
 
 const StationApplicationForm = ({ onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -8,6 +8,34 @@ const StationApplicationForm = ({ onSubmit }) => {
     location: "",
     documents: null,
   });
+  //email service
+const sendEmails = (formData, documentUrl, ownerEmail) => {
+  // Send to Admin
+  emailjs.send(
+    import.meta.env.VITE_EMAILJS_SERVICE_ID,
+    import.meta.env.VITE_EMAILJS_TEMPLATE_ADMIN,
+    {
+      stationName: formData.stationName,
+      location: formData.location,
+      ownerEmail,
+      documentUrl: documentUrl || "No document uploaded",
+    },
+    import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+  );
+
+  // Send to Owner
+  emailjs.send(
+    import.meta.env.VITE_EMAILJS_SERVICE_ID,
+    import.meta.env.VITE_EMAILJS_TEMPLATE_OWNER,
+    {
+      stationName: formData.stationName,
+      location: formData.location,
+      ownerEmail,
+      documentUrl: documentUrl || "No document uploaded",
+    },
+    import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+  );
+};
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -17,7 +45,7 @@ const StationApplicationForm = ({ onSubmit }) => {
     }));
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault();
 
   try {
@@ -31,13 +59,20 @@ const StationApplicationForm = ({ onSubmit }) => {
     const res = await axios.post(
       `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/ownersetting/`,
       data,
-      {
-        withCredentials: true, // ✅ send cookie for auth
-      }
+      { withCredentials: true }
     );
 
     console.log("Application submitted successfully:", res.data);
-    onSubmit(); // move parent to hold page
+
+    // 👇 Use res.data safely
+    const fileUrl = res.data.documentUrl || "No document uploaded";
+
+    // Ideally replace with logged-in owner email
+    const ownerEmail = "owner@example.com";
+
+    sendEmails(formData, fileUrl, ownerEmail);
+
+    onSubmit(); // go to "hold" page
   } catch (err) {
     console.error("Error submitting application:", err.response?.data || err);
     alert("Failed to submit application");

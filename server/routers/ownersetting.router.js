@@ -9,9 +9,15 @@ const router = express.Router();
 // Multer config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "./uploads"),
-  filename: (req, file, cb) => cb(null, file.originalname),
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + "-" + file.originalname);
+  },
 });
-const upload = multer({ storage });
+const upload = multer({ storage });   // 👈 define it here
+
+
+
 
 // Middleware: require authentication
 function requireAuth(req, res, next) {
@@ -44,7 +50,9 @@ router.post("/", requireAuth, upload.single("documents"), async (req, res) => {
       ownerId: new ObjectId(ownerId),
       stationName: req.body.stationName,
       location: req.body.location,
-      documentPath: req.file ? req.file.path : null,
+      documentPath: req.file 
+  ? `${req.protocol}://${req.get("host")}/uploadedImages/${req.file.filename}`
+  : null,
       status: "pending",
       createdAt: new Date(),
     };
