@@ -26,52 +26,52 @@ router.get("/", allowToAdminOnly, async (req, res) => {
 });
 
 
-router.get("/hello", async (req, res) => {
+// /owner/hello
+
+router.get("/hello", requireAuth, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    if (!token) {
-      return res.status(401).json({ error: "Not authenticated" });
-    }
+    const db = req.app.locals.db;
 
-    let tokenData;
-    try {
-      tokenData = jwt.verify(token, process.env.SECRET_KEY || "dev_secret");
-    } catch (err) {
-      console.error("JWT verify failed:", err.message);
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
-    console.log("Decoded token in /hello:", tokenData);
-
-    const db = req.app.locals.db; // ✅ MongoClient database
-    if (!db) {
-      return res.status(500).json({ error: "Database not available" });
-    }
-
-    if (!tokenData._id) {
-      return res.status(400).json({ error: "Invalid token payload" });
-    }
-
-    let owner;
-    try {
-      owner = await db
-        .collection("StationOwners")
-        .findOne({ _id: new ObjectId(tokenData._id) }, { projection: { password: 0 } });
-    } catch (e) {
-      console.error("ObjectId conversion failed:", e.message);
-      return res.status(400).json({ error: "Invalid ObjectId" });
-    }
+    // ✅ Fetch owner from Owners collection
+    const owner = await db.collection("Owners").findOne(
+      { _id: new ObjectId(req.tokenData._id) },
+      { projection: { password: 0 } }
+    );
 
     if (!owner) {
       return res.status(404).json({ error: "Owner not found" });
     }
+    console.log("owner:" , owner);
 
-    res.status(200).json(owner);
-  } catch (error) {
-    console.error("Hello route error:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    // ✅ Fetch application for this owner
+    const application = await db.collection("Owners").findOne({
+      emailId: owner.emailId,
+    });
+    console.log("application:" , application);
+
+    if (!application) {
+      return res.json({
+        email: owner.email,
+        role: "owner",
+        status: "none", // no application submitted yet
+      });
+    }
+
+    // ✅ Return combined response
+    console.log("sending owner:" , application)
+    return res.json({
+      email: owner.email,
+      role: "owner",
+      status: application.status, // pending | approved | rejected | hold
+      appliedAt: application.createdAt,
+    });
+  } catch (err) {
+    console.error("Hello route error:", err);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+
 
 
 
@@ -106,27 +106,57 @@ router.post("/",allowToAdminOnly,
     }
   }
 );
-router.post("/signup", async (req, res, next) => {
-  try {
-    let obj = req.body;
-    let OwnerObj = await OwnerService.checkOwner(obj);
-    if (!OwnerObj) {
-      // Owner is not registered, add to database with role as Owner
-      obj.role = "Owner";
-      OwnerService.addOwner(obj);
-      res.status(201).json({ message: "Signup Operation Successful" });
-    } //if
-    else {
-      res.status(409).json({ error: "This emailid is already registered" });
-    }
-    console.log("SECRET_KEY exists:", !!process.env.SECRET_KEY);
-console.log("JWT_EXPIRY:", process.env.JWT_EXPIRY);
 
-  } catch (error) {
-    //try
-    next(error); // Send error to middleware
+router.post("/signup", async (req, res) => {
+  try {
+    const { name, emailId, password} = req.body;
+    console.log(emailId);
+    const db = req.app.locals.db;
+    
+    const existing = await db.collection("Owners").findOne({ emailId: emailId });
+    if (existing) {
+      
+      return res.status(409).json({ message: "Email already exists" });
+    }
+    
+    const newOwner = {
+      name,
+      emailId: emailId,
+      password,
+      role: "owner",
+      hasApplied: false,
+      status: "new",
+      createdAt: new Date(),
+    };
+
+    const result = await db.collection("Owners").insertOne(newOwner);
+    console.log(result);
+    const token = jwt.sign(
+      { _id: result.insertedId.toString(), role: newOwner.role, email: emailId },
+      process.env.SECRET_KEY || "dev_secret",
+      { expiresIn: process.env.JWT_EXPIRY || "1d" }
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "Lax",
+      maxAge: ms(process.env.JWT_EXPIRY || "1d"),
+    });
+
+    res.status(201).json({
+      message: "Signup successful",
+      owner: { ...newOwner, _id: result.insertedId, password: undefined },
+    });
+  } catch (err) {
+    console.error("Signup error:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+
+
+
 router.post("/signout", async (req, res, next) => {
   // delete the token
   try {
@@ -149,40 +179,36 @@ Use 422 for validation errors.
 router.post("/login", async (req, res) => {
   try {
     const { emailId, password } = req.body;
-    const db = req.db || req.app.locals.db;
+    const db = req.app.locals.db;
 
-    const OwnerObj = await OwnerService.checkOwnerTryingToLogIn({ emailId });
-    if (!OwnerObj) return res.status(401).json({ error: "Wrong emailId" });
-    if (OwnerObj.password !== password) return res.status(401).json({ error: "Wrong password" });
-    // let settingsOwner={};
-    // settingsOwner.state="noSubmission";
+    const owner = await db.collection("Owners").findOne({ emailId: emailId });
+    if (!owner) return res.status(401).json({ error: "Wrong email" });
+    if (owner.password !== password) return res.status(401).json({ error: "Wrong password" });
 
     const token = jwt.sign(
-  { _id: OwnerObj._id.toString(), role: OwnerObj.role },
-  process.env.SECRET_KEY || "dev_secret",
-  { expiresIn: process.env.JWT_EXPIRY || "1h" }
-);
-
-    console.log("SECRET_KEY exists:", !!process.env.SECRET_KEY);
-console.log("JWT_EXPIRY:", process.env.JWT_EXPIRY);
-
+      { _id: owner._id.toString(), role: owner.role, email: emailId },
+      process.env.SECRET_KEY || "dev_secret",
+      { expiresIn: process.env.JWT_EXPIRY || "1d" }
+    );
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false, // set true only in production HTTPS
+      secure: false,
       sameSite: "Lax",
       maxAge: ms(process.env.JWT_EXPIRY || "1d"),
     });
 
     res.status(200).json({
       message: "Logged in successfully",
-      owner: { ...OwnerObj, password: undefined },
+      owner: { ...owner, password: undefined },
     });
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+
 
 router.put(
   "/",
@@ -212,20 +238,30 @@ router.delete("/:id", allowToAdminOnly, async (req, res, next) => {
 
 
 
+function requireAuth(req, res, next) {
+  const token = req.cookies?.token; // assuming you set cookie in login
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    req.tokenData = decoded; // attach user data to request
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+}
 
 
 function allowToAdminOnly(req, res, next) {
-  if (
-    !req.tokenData ||
-    req.tokenData.role == "guest" ||
-    req.tokenData.role == "Owner"
-  ) {
-    // assuming you set req.Owner after authentication
-    res.status(401).json({ message: "Unauthorized" });
-  } else if (req.tokenData.role == "admin") {
-    next(); // allow
-  } else {
-    res.status(401).json({ message: "OOPs...Some Error.." });
+  if (!req.tokenData) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
+  if (req.tokenData.role === "admin") {
+    return next();
+  }
+  return res.status(403).json({ message: "Forbidden" });
 }
+
 module.exports = router;

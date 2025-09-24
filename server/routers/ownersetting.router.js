@@ -43,25 +43,40 @@ function allowToAdminOnly(req, res, next) {
 // ================== ROUTES ==================
 
 // Submit new application (Owner only)
-router.post("/", requireAuth, upload.single("documents"), async (req, res) => {
+router.post("/", requireAuth, upload.single("file"), async (req, res) => {
   try {
-    const ownerId = req.tokenData._id;
+    const db = req.app.locals.db;
+    if (!db) {
+      return res.status(500).json({ error: "Database not connected" });
+    }
+
+    // Get email from token (not from client body)
+    const ownerEmail = req.tokenData.email;
+    console.log("owner email: ",ownerEmail)
+
     const obj = {
-      ownerId: new ObjectId(ownerId),
       stationName: req.body.stationName,
       location: req.body.location,
-      documentPath: req.file 
-  ? `${req.protocol}://${req.get("host")}/uploadedImages/${req.file.filename}`
-  : null,
+      ownerEmail: req.tokenData.email,   // ✅ always correct
       status: "pending",
       createdAt: new Date(),
+      documentUrl: req.file ? `/uploads/${req.file.filename}` : null,
     };
 
-    const result = await OwnerSettingService.addApplication(obj);
-    res.status(201).json(result);
-  } catch (error) {
-    console.error("❌ Add application error:", error);
-    res.status(500).json({ error: error.message || "Internal Server Error" });
+    console.log("📥 Saving application:", obj);
+
+    const result = await db.collection("Applications").insertOne(obj);
+    const newApp = { ...obj, _id: result.insertedId };
+
+    // Real-time notify admins
+    if (req.app.locals.io) {
+      req.app.locals.io.emit("newApplication", newApp);
+    }
+
+    res.status(201).json(newApp);
+  } catch (err) {
+    console.error("🔥 ownersetting POST error:", err);
+    res.status(500).json({ error: err.message || "Internal Server Error" });
   }
 });
 
@@ -119,11 +134,44 @@ router.get("/state/:state", requireAuth, allowToAdminOnly, async (req, res, next
 router.put("/:id", requireAuth, allowToAdminOnly, async (req, res, next) => {
   try {
     const result = await OwnerSettingService.updateApplication(req.params.id, req.body);
+
+    // Fetch application to get ownerEmail
+    const application = await OwnerSettingService.getApplicationById(req.params.id);
+
+    if (req.body.status === "approved") {
+      // send approval email to owner
+      await emailjs.send(
+        process.env.EMAILJS_SERVICE,
+        process.env.EMAILJS_TEMPLATE_APPROVED,
+        {
+          stationName: application.stationName,
+          location: application.location,
+          to_email: application.ownerEmail,
+        },
+        process.env.EMAILJS_PUBLIC_KEY
+      );
+    }
+
+    if (req.body.status === "rejected") {
+      // send rejection email
+      await emailjs.send(
+        process.env.EMAILJS_SERVICE,
+        process.env.EMAILJS_TEMPLATE_REJECTED,
+        {
+          stationName: application.stationName,
+          location: application.location,
+          to_email: application.ownerEmail,
+        },
+        process.env.EMAILJS_PUBLIC_KEY
+      );
+    }
+
     res.status(200).json(result);
   } catch (error) {
     next(error);
   }
 });
+
 
 // Admin: delete application
 router.delete("/:id", requireAuth, allowToAdminOnly, async (req, res, next) => {

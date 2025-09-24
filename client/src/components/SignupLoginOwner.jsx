@@ -37,7 +37,7 @@ const SignupLoginOwner = ({ onAuthSuccess }) => {
            credentials: "include", // ✅ keep session cookie
         }
       );
-
+      console.log(res)
       if (!res.ok) throw new Error("Auth failed");
       const data = await res.json();
       console.log(data);
@@ -48,6 +48,7 @@ const SignupLoginOwner = ({ onAuthSuccess }) => {
         alert("Signup successful ✅");
         onAuthSuccess?.(data); 
       }
+
     } catch (err) {
       console.error(err);
       alert("Something went wrong ❌");

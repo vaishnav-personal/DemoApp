@@ -47,6 +47,7 @@ async function checkOwnerTryingToLogIn(obj) {
   const  OwnerObj= await collection.findOne({
     emailId: obj.emailId,
   });
+  console.log(OwnerObj);
   return OwnerObj;
 }
 async function addOwner(obj) {

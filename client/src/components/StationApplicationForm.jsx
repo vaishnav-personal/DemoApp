@@ -2,40 +2,12 @@ import React, { useState } from "react";
 import axios from "axios";
 import emailjs from "emailjs-com";
 
-const StationApplicationForm = ({ onSubmit }) => {
+const StationApplicationForm = ({ onSubmit, ownerEmail }) => {
   const [formData, setFormData] = useState({
     stationName: "",
     location: "",
     documents: null,
   });
-  //email service
-const sendEmails = (formData, documentUrl, ownerEmail) => {
-  // Send to Admin
-  emailjs.send(
-    import.meta.env.VITE_EMAILJS_SERVICE_ID,
-    import.meta.env.VITE_EMAILJS_TEMPLATE_ADMIN,
-    {
-      stationName: formData.stationName,
-      location: formData.location,
-      ownerEmail,
-      documentUrl: documentUrl || "No document uploaded",
-    },
-    import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-  );
-
-  // Send to Owner
-  emailjs.send(
-    import.meta.env.VITE_EMAILJS_SERVICE_ID,
-    import.meta.env.VITE_EMAILJS_TEMPLATE_OWNER,
-    {
-      stationName: formData.stationName,
-      location: formData.location,
-      ownerEmail,
-      documentUrl: documentUrl || "No document uploaded",
-    },
-    import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-  );
-};
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -45,44 +17,76 @@ const sendEmails = (formData, documentUrl, ownerEmail) => {
     }));
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
+  const sendEmails = (stationName, location, documentUrl, ownerEmail) => {
+    // Send email to Admin
+    emailjs.send(
+      import.meta.env.VITE_EMAILJS_SERVICE_ID,
+      import.meta.env.VITE_EMAILJS_TEMPLATE_ADMIN,
+      {
+        stationName,
+        location,
+        ownerEmail,
+        documentUrl: documentUrl || "No document uploaded",
+      },
+      import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+    );
 
-  try {
+    // Send email to Owner
+    emailjs.send(
+      import.meta.env.VITE_EMAILJS_SERVICE_ID,
+      import.meta.env.VITE_EMAILJS_TEMPLATE_OWNER,
+      {
+        stationName,
+        location,
+        ownerEmail,
+        documentUrl: documentUrl || "No document uploaded",
+      },
+      import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+    );
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
     const data = new FormData();
     data.append("stationName", formData.stationName);
     data.append("location", formData.location);
+    data.append("ownerEmail", ownerEmail);
     if (formData.documents) {
-      data.append("documents", formData.documents);
+      data.append("file", formData.documents);
     }
 
-    const res = await axios.post(
-      `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/ownersetting/`,
-      data,
-      { withCredentials: true }
-    );
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/ownersetting`,
+        data,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
 
-    console.log("Application submitted successfully:", res.data);
+      console.log("✅ Application submitted:", res.data);
 
-    // 👇 Use res.data safely
-    const fileUrl = res.data.documentUrl || "No document uploaded";
+      // Send notification emails
+      sendEmails(
+        formData.stationName,
+        formData.location,
+        res.data.documentUrl,
+        ownerEmail
+      );
 
-    // Ideally replace with logged-in owner email
-    const ownerEmail = "owner@example.com";
-
-    sendEmails(formData, fileUrl, ownerEmail);
-
-    onSubmit(); // go to "hold" page
-  } catch (err) {
-    console.error("Error submitting application:", err.response?.data || err);
-    alert("Failed to submit application");
-  }
-};
-
+      alert("Application submitted successfully!");
+      onSubmit();
+    } catch (err) {
+      console.error("❌ Error submitting application:", err.response?.data || err.message);
+      alert("Failed to submit application.");
+    }
+  };
 
   const handleSkip = () => {
     console.log("Application skipped — forcing hold state");
-    onSubmit(); // same as submitted → parent will show hold page
+    onSubmit();
   };
 
   return (
@@ -95,6 +99,7 @@ const handleSubmit = async (e) => {
             name="stationName"
             className="form-control"
             placeholder="Station Name"
+            value={formData.stationName}
             onChange={handleChange}
             required
           />
@@ -105,6 +110,7 @@ const handleSubmit = async (e) => {
             name="location"
             className="form-control"
             placeholder="Location"
+            value={formData.location}
             onChange={handleChange}
             required
           />
@@ -128,7 +134,7 @@ const handleSubmit = async (e) => {
             className="btn btn-secondary w-100"
             onClick={handleSkip}
           >
-            Skip this,if already applied
+            Skip if already applied
           </button>
         </div>
       </form>

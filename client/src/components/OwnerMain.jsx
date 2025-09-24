@@ -1,64 +1,63 @@
+// OwnerMain.jsx
 import React, { useState, useEffect } from "react";
 import SignupLoginOwner from "./SignupLoginOwner";
 import OwnerDashboard from "./OwnerDashboard";
 import StationApplicationForm from "./StationApplicationForm";
 
+const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3002";
+
 const OwnerMain = () => {
-  const [step, setStep] = useState("loading"); // auth → application → hold → dashboard
+  const [step, setStep] = useState("loading");
   const [owner, setOwner] = useState(null);
 
-  // Check owner session + status
-useEffect(() => {
+  // Check if owner session exists
   const fetchOwner = async () => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL || "http://localhost:3002"}/owner/hello`,
-        { credentials: "include" }
-      );
+  try {
+    const res = await fetch(`${apiUrl}/owner/hello`, {
+      method: "GET",
+      credentials: "include",
+    });
+console.log(res);
+    if (!res.ok) throw new Error("Auth failed");
 
-      if (!res.ok) {
-        const errText = await res.text();
-        console.error("Hello API failed:", res.status, errText);
-        setStep("auth"); // fallback
-        throw new Error("Auth failed");
-        return;
-      }
-
-      const data = await res.json();
-      console.log("Hello API success:", data); // 👀 debug
-
-      setOwner(data);
-
-      if (!data.hasApplied) {
-        setStep("application");
-      } else if (data.status === "hold") {
-        setStep("hold");
-      } else if (data.status === "approved") {
-        setStep("dashboard");
-      } else {
-        setStep("application");
-      }
-    } catch (err) {
-      console.error("Error fetching owner:", err);
-      setStep("auth");
+    const data = await res.json();
+    setOwner(data);
+    console.log("printing1:",data)
+    if (data.status == "new") {
+      setStep("application");
+      console.log("setting application");
+      
+    } else if (data.status === "approved") {
+      console.log("setting dashboard")
+      setStep("dashboard"); // ✅ Show dashboard if approved
+    } else {
+      console.log("setting hold")
+      setStep("hold"); // pending/hold
     }
-  };
+  } catch (err) {
+    console.error("Error fetching owner:", err);
+    setStep("auth");
+  }
+};
 
-  fetchOwner();
-}, []);
 
-  // After login/signup → re-run check
+  useEffect(() => {
+    fetchOwner();
+  }, []);
+
   const handleAuthSuccess = () => {
-    setStep("loading"); // triggers useEffect
+    fetchOwner();
   };
 
   const handleApplicationSubmit = () => {
-    setStep("hold"); // directly show hold after submitting
+    setStep("hold");
   };
 
   if (step === "loading") return <p>Loading...</p>;
-  if (step === "auth") return <SignupLoginOwner onAuthSuccess={handleAuthSuccess} />;
-  if (step === "application") return <StationApplicationForm onSubmit={handleApplicationSubmit} />;
+  if (step === "auth")
+    return <SignupLoginOwner onAuthSuccess={handleAuthSuccess} />;
+  if (step === "application")
+    return <StationApplicationForm onSubmit={handleApplicationSubmit} />;
   if (step === "hold")
     return (
       <div className="container mt-5 text-center">
@@ -66,10 +65,7 @@ useEffect(() => {
         <p>Your request has been sent to admin. Please wait up to 24 hours.</p>
       </div>
     );
-  if (step === "dashboard"){
-    return <OwnerDashboard />;
-    
-  } 
+  if (step === "dashboard") return <OwnerDashboard />;
 
   return null;
 };

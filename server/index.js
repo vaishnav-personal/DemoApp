@@ -2,7 +2,7 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv").config();
-const { app } = require("./init.js");
+const { app, server } = require("./init.js");
 const cors = require("cors");
 const axios = require("axios");
 
@@ -16,10 +16,13 @@ const customerRouter = require("./routers/customer.router.js");
 const fileRouter = require("./routers/file.router.js");
 const specialRouter = require("./routers/special.router.js");
 const LocationRouter = require("./routers/LocationRouter.js");
+const adminRouter = require("./routers/Admin.router.js");
 
 const logger = require("./logger");
 const errorLogger = require("./errorLogger");
 
+
+// ✅ Middlewares
 app.use(
   cors({
     origin: process.env.ORIGIN,
@@ -27,18 +30,18 @@ app.use(
     exposedHeaders: ["Content-Disposition"],
   })
 );
-
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
-
 app.use(authenticateUser);
 app.use(logActivity);
 
+// ✅ Routers
 app.use("/specials", specialRouter);
 app.use("/users", userRouter);
-app.use("/owner",ownerRouter);
-app.use("/ownersetting", ownerSettingRouter); 
+app.use("/owner", ownerRouter);
+app.use("/admin", adminRouter);
+app.use("/ownersetting", ownerSettingRouter);
 app.use("/products", checkAuthority, productRouter);
 app.use("/categories", checkAuthority, categoryRouter);
 app.use("/customers", checkAuthority, customerRouter);
@@ -47,20 +50,18 @@ app.use("/files", fileRouter);
 app.use("/uploadedImages", express.static("uploads"));
 app.use(errorLogger);
 
-//now i want the data comes from backend not overpass api
-// ---------------- EV Stations In-Memory CRUD ----------------
+// ✅ EV Station In-Memory CRUD (unchanged)
 let stations = [
-  { id: 1, name: "Station A", lat: 18.4575, lng: 73.8652 }, // Katraj Lake
-  { id: 2, name: "Station B", lat: 18.4630, lng: 73.8600 }, // Near Bharti Vidyapeeth
-  { id: 3, name: "Station C", lat: 18.4520, lng: 73.8700 }, // Katraj Zoo side
-  { id: 4, name: "Station D", lat: 18.4650, lng: 73.8750 }, // Towards Bibvewadi
+  { id: 1, name: "Station A", lat: 18.4575, lng: 73.8652 },
+  { id: 2, name: "Station B", lat: 18.4630, lng: 73.8600 },
+  { id: 3, name: "Station C", lat: 18.4520, lng: 73.8700 },
+  { id: 4, name: "Station D", lat: 18.4650, lng: 73.8750 },
 ];
-// ✅ List all stations
+
 app.get("/api/ev/stations", (req, res) => {
   res.json(stations);
 });
 
-// ✅ Add station
 app.post("/api/ev/stations", (req, res) => {
   const { name, lat, lng } = req.body;
   const newStation = { id: Date.now(), name, lat, lng };
@@ -68,7 +69,6 @@ app.post("/api/ev/stations", (req, res) => {
   res.json(newStation);
 });
 
-// ✅ Update station
 app.put("/api/ev/stations/:id", (req, res) => {
   const { id } = req.params;
   const { name, lat, lng } = req.body;
@@ -78,45 +78,11 @@ app.put("/api/ev/stations/:id", (req, res) => {
   res.json({ success: true });
 });
 
-// ✅ Delete station
 app.delete("/api/ev/stations/:id", (req, res) => {
   const { id } = req.params;
   stations = stations.filter((s) => s.id != id);
   res.json({ success: true });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // // ✅ Nearby EV stations endpoint
 // app.get("/api/ev/nearby", async (req, res) => {
