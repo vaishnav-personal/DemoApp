@@ -1,7 +1,7 @@
 // src/components/EVTracker.jsx
 import React, { useEffect, useRef, useState } from "react";
 import EVMap from "./EVMap";
-
+import { useNavigate } from "react-router-dom";
 const POLL_MS = 5000;
 
 export default function EVTracker() {
@@ -12,7 +12,7 @@ export default function EVTracker() {
   const [searchResults, setSearchResults] = useState([]);
   const [routeInfo, setRouteInfo] = useState(null);
   const timerRef = useRef(null); // ✅ now defined properly
-
+  const navigate = useNavigate();
   // ✅ Get user’s current location once
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -154,14 +154,25 @@ export default function EVTracker() {
           <h4>Stations near searched place</h4>
           <ul className="list-group">
             {stations.map((st) => (
-              <li
-                key={st.id}
-                className="list-group-item list-group-item-action"
-                style={{ cursor: "pointer" }}
-                onClick={() => setSelected(st)} // user clicks → route drawn
-              >
-                {st.name} ({st.lat.toFixed(4)}, {st.lng.toFixed(4)})
-              </li>
+              <>
+                <li
+                  key={st.id}
+                  className="list-group-item list-group-item-action m-2"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setSelected(st)} // user clicks → route drawn
+                >
+                  {st.name} ({st.lat.toFixed(4)}, {st.lng.toFixed(4)})
+                  <button
+                    className="btn btn-primary ms-2"
+                    onClick={(e) => {
+                      e.stopPropagation(); // ✅ prevent li click
+                      navigate("/bookingdashboard", { state: { station: st } }); // ✅ pass station
+                    }}
+                  >
+                    Book
+                  </button>
+                </li>
+              </>
             ))}
           </ul>
         </div>

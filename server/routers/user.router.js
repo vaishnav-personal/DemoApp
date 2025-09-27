@@ -38,6 +38,7 @@ router.get("/hello", async (req, res, next) => {
         }
       });
     }
+    console.log( "token is: ",token);
     // let list = await StudentService.getAllStudents();
   } catch (error) {
     next(error); // Send error to middleware
@@ -130,10 +131,13 @@ router.post("/login", async (req, res, next) => {
       console.log(
         "Logged in success.. " + userObj.emailId + " " + userObj.role
       );
+      
       // if successful login, assign token
       const token = jwt.sign(userObj, process.env.SECRET_KEY, {
         expiresIn: process.env.JWT_EXPIRY,
       });
+      // console.log("token data is",token);
+      
       res.cookie("token", token, {
         httpOnly: true,
         secure: true, // Set to true in production with HTTPS
@@ -144,6 +148,7 @@ router.post("/login", async (req, res, next) => {
         .status(201)
         .json({ user: userObj, message: "Logged in Successfully" });
     }
+    
   } catch (error) {
     next(error); // Send error to middleware
   }

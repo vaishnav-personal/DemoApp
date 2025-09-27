@@ -14,6 +14,7 @@ import OwnerMain from "./components/OwnerMain";
 import AdminPanel from "./components/AdminPanel";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLogin from "./components/AdminLogin";
+import BookingDashboard from "./components/bookingdashboard";
 
 function App() {
   axios.defaults.withCredentials = true; // keep cookies
@@ -24,10 +25,10 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<MainPage />} />
-        <Route path="/trial" element={<TrialPage />} />
+        {/* <Route path="/trial" element={<TrialPage />} /> */}
         <Route path="/map" element={<EVTracker />} />
         <Route path="/owner" element={<OwnerMain />} />
-        
+         <Route path="/bookingdashboard" element={<BookingDashboard />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route
           path="/admin"
