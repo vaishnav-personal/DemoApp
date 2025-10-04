@@ -7,12 +7,10 @@ const cors = require("cors");
 const axios = require("axios");
 
 const authenticateUser = require("./authenticateUser.js");
-const productRouter = require("./routers/product.router.js");
+
 const userRouter = require("./routers/user.router.js");
 const ownerRouter = require("./routers/owner.router.js");
 const ownerSettingRouter = require("./routers/ownersetting.router.js");
-const categoryRouter = require("./routers/category.router.js");
-const customerRouter = require("./routers/customer.router.js");
 const fileRouter = require("./routers/file.router.js");
 const specialRouter = require("./routers/special.router.js");
 const LocationRouter = require("./routers/LocationRouter.js");
@@ -43,9 +41,6 @@ app.use("/users", userRouter);
 app.use("/owner", ownerRouter);
 app.use("/admin", adminRouter);
 app.use("/ownersetting", ownerSettingRouter);
-app.use("/products", checkAuthority, productRouter);
-app.use("/categories", checkAuthority, categoryRouter);
-app.use("/customers", checkAuthority, customerRouter);
 app.use("/api/location", LocationRouter);
 app.use("/files", fileRouter);
 app.use("/uploadedImages", express.static("uploads"));

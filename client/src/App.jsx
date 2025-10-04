@@ -8,7 +8,7 @@ import "@mapbox/mapbox-gl-directions/dist/mapbox-gl-directions.css"; //mapbox ap
 
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import { useIsMobile } from "./external/vite-sdk";
-import TrialPage from "./components/TrialPage";
+
 import EVTracker from "./components/evTracker";
 import OwnerMain from "./components/OwnerMain";
 import AdminPanel from "./components/AdminPanel";
@@ -25,7 +25,6 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<MainPage />} />
-        {/* <Route path="/trial" element={<TrialPage />} /> */}
         <Route path="/map" element={<EVTracker />} />
         <Route path="/owner" element={<OwnerMain />} />
          <Route path="/bookingdashboard" element={<BookingDashboard />} />

@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
-import ContentPage from "./ContentPage";
+
 import LoginSignupPage from "./LoginSignupPage";
 import axios from "axios";
 import { BeatLoader } from "react-spinners";
-import AdminManageMenus from "./AdminManageMenus";
-import AdminSettingMenus from "./AdminSettingMenus";
-import AdminReportMenus from "./AdminReportMenus";
-import EVTracker from "./evTracker";
+
 import { useNavigate } from "react-router-dom";
 
 
@@ -19,10 +16,7 @@ export default function MainPage() {
   let [selectedEntityIndex, setSelectedEntityIndex] = useState(-1);
   let [flagCheckSession, setFlagCheckSession] = useState(false);
   let [list,setList]=useState([]);
-  let adminMenus = [];
-  adminMenus.push(AdminManageMenus);
-  adminMenus.push(AdminSettingMenus);
-  adminMenus.push(AdminReportMenus);
+  
   useEffect(() => {
     checkSessionExists();
   }, []);
@@ -182,7 +176,7 @@ export default function MainPage() {
           <div className="col-lg-5 col-md-7 col-sm-9 p-4 bg-white rounded-3 shadow-lg text-center animate__animated animate__fadeInDown">
             {user && (
               <div className="mb-4 fs-5 text-dark">
-                Welcome,{" "}
+                Welcome,
                 <span className="fw-semibold text-success">{user.name}</span>!
               </div>
             )}
@@ -217,51 +211,6 @@ export default function MainPage() {
               )}
               
             </div>
-            <ul className="list-unstyled text-start">
-              {adminMenus.map((menu, menuIndex) => (
-                <li key={menuIndex} className="mb-3">
-                  <button
-                    className={`btn w-100 text-start py-3 fs-5 d-flex align-items-center justify-content-between ${
-                      selectedMenuIndex === menuIndex
-                        ? "btn-info text-white shadow-sm"
-                        : "btn-outline-primary menu-btn-hover" // Added custom class for hover
-                    }`}
-                    onClick={() => handleSideBarMenuClick(menuIndex)}
-                    disabled={!user}
-                  >
-                    <span>{menu.name}</span>
-                    <span className="ms-auto">
-                      {selectedMenuIndex === menuIndex ? (
-                        <i className="bi bi-chevron-up"></i>
-                      ) : (
-                        <i className="bi bi-chevron-down"></i>
-                      )}
-                    </span>
-                  </button>
-                  {selectedMenuIndex === menuIndex && (
-                    <ul className="list-unstyled ps-4 mt-2 border-start border-primary ms-2 pt-2 pb-1 rounded-sm bg-light animate__animated animate__fadeInLeft">
-                      {" "}
-                      {/* Added animation */}
-                      {menu.entities.map((entity, entityIndex) => (
-                        <li key={entityIndex} className="mb-2">
-                          <button
-                            className={`btn w-100 text-start btn-md ${
-                              selectedEntityIndex === entityIndex
-                                ? "btn-secondary text-white shadow-sm"
-                                : "btn-outline-dark menu-btn-hover"
-                            }`}
-                            onClick={() => handleEntityClick(entityIndex)}
-                            disabled={!user}
-                          >
-                            {entity.name}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       )}
@@ -273,13 +222,7 @@ export default function MainPage() {
             onBackButtonClick={handleBackButtonClick}
           />
         )}
-        {view === "content" && (
-          <ContentPage
-            selectedEntity={selectedEntity}
-            user={user}
-            onBackButtonClick={handleBackButtonClick}
-          />
-        )}
+        
       </div>
     </>
   );
