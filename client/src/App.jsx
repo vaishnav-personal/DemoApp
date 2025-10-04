@@ -14,7 +14,10 @@ import OwnerMain from "./components/OwnerMain";
 import AdminPanel from "./components/AdminPanel";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLogin from "./components/AdminLogin";
+import Aboutus from "../src/components/Aboutus";
 import BookingDashboard from "./components/bookingdashboard";
+import Help from "./components/Help";
+import PaymentsPage from "./components/PaymentsPage";
 
 function App() {
   axios.defaults.withCredentials = true; // keep cookies
@@ -27,8 +30,10 @@ function App() {
         <Route path="/" element={<MainPage />} />
         <Route path="/map" element={<EVTracker />} />
         <Route path="/owner" element={<OwnerMain />} />
+        <Route path="/about" element={<Aboutus />} />
          <Route path="/bookingdashboard" element={<BookingDashboard />} />
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/help" element={<Help/>}> </Route>
         <Route
           path="/admin"
           element={
@@ -37,7 +42,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/payments" element={<PaymentsPage />} />
         <Route path="*" element={<p>Page not found</p>} />
+
       </Routes>
     </Router>
   );
