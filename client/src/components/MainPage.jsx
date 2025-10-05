@@ -82,6 +82,7 @@ export default function MainPage() {
       if (response) {
         setUser(response);
         setView("home");
+        console.log("hi");
       }
     } catch (err) {
       setFlagCheckSession(false);
@@ -102,6 +103,7 @@ export default function MainPage() {
     setUser("");
     setView("home");
     axios.post(import.meta.env.VITE_API_URL + "/users/signout");
+    navigate("/");
   }
 
   function handleCloseLoginSignupPageClose() {
@@ -141,7 +143,7 @@ export default function MainPage() {
 
       {view === "home" && (
         <div className="d-flex flex-column align-items-center justify-content-center min-vh-100 p-3">
-          <div className="col-lg-5 col-md-7 col-sm-9 p-4  shadow-lg text-center animate__animated animate__fadeInDown">
+          <div className="col-lg-5 col-md-7 col-sm-9 p-4  shadow-lg text-center animate__animated ">
             {user && (
               <div className="mb-4 fs-5 text-light">
                 <h1>Welcome,{" "}
