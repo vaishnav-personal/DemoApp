@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Ownermaindash from "./Ownermaindash";
 
 const OwnerDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -79,17 +80,7 @@ const OwnerDashboard = () => {
 
   if (owner?.status === "approved") {
     return (
-      <div className="container mt-5">
-        <h2>Owner Dashboard</h2>
-        <p>Welcome, {owner.email}!</p>
-
-        {/* Owner features */}
-        <ul>
-          <li>Manage your charging stations</li>
-          <li>View booking requests</li>
-          <li>Update your profile</li>
-        </ul>
-      </div>
+      <Ownermaindash/>  
     );
   }
 

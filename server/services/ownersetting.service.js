@@ -1,6 +1,7 @@
 const { app } = require("../init.js");
 const { ObjectId } = require("mongodb");
 
+
 /**
  * Add new application
  */
@@ -50,17 +51,35 @@ async function getApplicationsByState(state) {
   return await db.collection("StationApplications").find({ state }).toArray();
 }
 
-/**
- * Update application
- */
+
 async function updateApplication(id, obj) {
   const db = app.locals.db;
+  if (!db) throw new Error("Database not connected");
+  const objectId = new ObjectId(id); 
   const collection = db.collection("StationApplications");
   delete obj._id;
-  return await collection.updateOne(
-    { _id: new ObjectId(id) },
-    { $set: obj }
+
+  let query;
+  try {
+    query = { _id: new ObjectId(id) }; // Use this if _id in MongoDB is ObjectId
+  } catch (err) {
+    console.error("⚠️ Invalid ObjectId:", id);
+    throw new Error("Invalid application ID");
+  }
+
+  const result = await collection.findOneAndUpdate(
+    query,
+    { $set: obj },
+    { returnDocument: "after" }
   );
+  console.log("result is :",result);
+  if (!result.value) {
+    console.error("⚠️ No document found for ID:", id);
+    return null; // or throw new Error("Application not found");
+  }
+
+  console.log("✅ Updated application:", result.value);
+  return result.value;
 }
 
 /**

@@ -17,6 +17,7 @@ const LocationRouter = require("./routers/LocationRouter.js");
 const adminRouter = require("./routers/Admin.router.js");
 const bookingrouter=require("./routers/UserBooking.router.js");
 const complaintsRoute = require("./routers/complaints.js");;
+import ownerProfileRouter from "./routers/ownerprofile.router.js";
 
 const logger = require("./logger");
 const errorLogger = require("./errorLogger");
@@ -46,6 +47,7 @@ app.use("/api/location", LocationRouter);
 app.use("/files", fileRouter);
 app.use("/complaints", complaintsRoute);
 app.use("/uploadedImages", express.static("uploads"));
+app.use("/owner", ownerProfileRouter);
 app.use("/user/booking",bookingrouter);
 app.use(errorLogger);
 

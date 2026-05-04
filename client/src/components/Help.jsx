@@ -40,6 +40,7 @@ export default function Help() {
       } else {
         alert("Something went wrong: " + (data.error || "Unknown error"));
       }
+      navigate("/");
     } catch (error) {
       alert("Error submitting complaint: " + error.message);
     }

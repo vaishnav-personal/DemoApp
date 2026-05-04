@@ -1,12 +1,12 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
-const { ObjectId } = require("mongodb");
+const emailjs = require("emailjs-com");
 const OwnerSettingService = require("../services/ownersetting.service");
 
 const router = express.Router();
 
-// Multer config
+// ---------------- Multer Config ----------------
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "./uploads"),
   filename: (req, file, cb) => {
@@ -14,12 +14,11 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + "-" + file.originalname);
   },
 });
-const upload = multer({ storage });   // 👈 define it here
+const upload = multer({ storage });
 
+// ---------------- Middleware ----------------
 
-
-
-// Middleware: require authentication
+// Auth middleware
 function requireAuth(req, res, next) {
   const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: "Not authenticated" });
@@ -32,7 +31,7 @@ function requireAuth(req, res, next) {
   }
 }
 
-// Middleware: allow only admins
+// Admin only middleware
 function allowToAdminOnly(req, res, next) {
   if (!req.tokenData || req.tokenData.role !== "admin") {
     return res.status(401).json({ message: "Unauthorized" });
@@ -40,47 +39,57 @@ function allowToAdminOnly(req, res, next) {
   next();
 }
 
-// ================== ROUTES ==================
+// ---------------- Routes ----------------
 
-// Submit new application (Owner only)
-router.post("/", requireAuth, upload.single("file"), async (req, res) => {
+
+
+router.post("/", requireAuth, upload.single("documents"), async (req, res) => {
   try {
     const db = req.app.locals.db;
-    if (!db) {
-      return res.status(500).json({ error: "Database not connected" });
-    }
+    if (!db) return res.status(500).json({ error: "Database not connected" });
 
-    // Get email from token (not from client body)
     const ownerEmail = req.tokenData.email;
-    console.log("owner email: ",ownerEmail)
 
-    const obj = {
+    const newApplication = {
       stationName: req.body.stationName,
-      location: req.body.location,
-      ownerEmail: req.tokenData.email,   // ✅ always correct
+      ownerName: req.body.ownerName,
+      contactNumber: req.body.contactNumber,
+      ownerEmail,
+      address: req.body.address || "",
+      city: req.body.city || "",
+      state: req.body.state || "",
+      pincode: req.body.pincode || "",
+      latitude: req.body.latitude || "",
+      longitude: req.body.longitude || "",
+      chargerTypes: req.body.chargerTypes || [],
+      numChargers: req.body.numChargers || "",
+      powerCapacity: req.body.powerCapacity || "",
+      operatingHours: req.body.operatingHours || "",
+      pricingModel: req.body.pricingModel || "",
+      amenities: req.body.amenities || [],
+      licenseId: req.body.licenseId || "",
+      gstNumber: req.body.gstNumber || "",
+      documentUrl: req.file ? `/uploads/${req.file.filename}` : null,
       status: "pending",
       createdAt: new Date(),
-      documentUrl: req.file ? `/uploads/${req.file.filename}` : null,
     };
 
-    console.log("📥 Saving application:", obj);
+    const result = await db.collection("Applications").insertOne(newApplication);
+    const savedApp = { ...newApplication, _id: result.insertedId };
 
-    const result = await db.collection("Applications").insertOne(obj);
-    const newApp = { ...obj, _id: result.insertedId };
-
-    // Real-time notify admins
-    if (req.app.locals.io) {
-      req.app.locals.io.emit("newApplication", newApp);
-    }
-
-    res.status(201).json(newApp);
+    // Optional: notify admins via WebSocket
+    if (req.app.locals.io) req.app.locals.io.emit("newApplication", savedApp);
+    console.log("New application submitted:", savedApp);
+    res.status(201).json(savedApp);
   } catch (err) {
     console.error("🔥 ownersetting POST error:", err);
     res.status(500).json({ error: err.message || "Internal Server Error" });
   }
 });
 
-// Admin: get all applications
+
+
+// GET: All applications (admin)
 router.get("/", requireAuth, allowToAdminOnly, async (req, res, next) => {
   try {
     const list = await OwnerSettingService.getAllApplications();
@@ -90,7 +99,7 @@ router.get("/", requireAuth, allowToAdminOnly, async (req, res, next) => {
   }
 });
 
-// Admin: get application by ID
+// GET: Application by ID
 router.get("/:id", requireAuth, allowToAdminOnly, async (req, res, next) => {
   try {
     const result = await OwnerSettingService.getApplicationById(req.params.id);
@@ -100,7 +109,7 @@ router.get("/:id", requireAuth, allowToAdminOnly, async (req, res, next) => {
   }
 });
 
-// Admin: get application by station name
+// GET: Application by station name
 router.get("/station/:stationName", requireAuth, allowToAdminOnly, async (req, res, next) => {
   try {
     const result = await OwnerSettingService.getApplicationByStationName(req.params.stationName);
@@ -110,7 +119,7 @@ router.get("/station/:stationName", requireAuth, allowToAdminOnly, async (req, r
   }
 });
 
-// Admin: get application by location
+// GET: Application by location
 router.get("/location/:location", requireAuth, allowToAdminOnly, async (req, res, next) => {
   try {
     const result = await OwnerSettingService.getApplicationByLocation(req.params.location);
@@ -120,7 +129,7 @@ router.get("/location/:location", requireAuth, allowToAdminOnly, async (req, res
   }
 });
 
-// Admin: get applications by state
+// GET: Applications by state
 router.get("/state/:state", requireAuth, allowToAdminOnly, async (req, res, next) => {
   try {
     const result = await OwnerSettingService.getApplicationsByState(req.params.state);
@@ -130,54 +139,25 @@ router.get("/state/:state", requireAuth, allowToAdminOnly, async (req, res, next
   }
 });
 
-// Admin: update application
-router.put("/:id", requireAuth, allowToAdminOnly, async (req, res, next) => {
+// PUT: Update application status / info (admin)
+router.put("/:id", requireAuth, allowToAdminOnly, async (req, res) => {
+  console.log("PUT /ownersetting/:id called with ID:", req.params.id);
+  console.log("Body:", req.body);
   try {
-    const result = await OwnerSettingService.updateApplication(req.params.id, req.body);
-
-    // Fetch application to get ownerEmail
-    const application = await OwnerSettingService.getApplicationById(req.params.id);
-
-    if (req.body.status === "approved") {
-      // send approval email to owner
-      await emailjs.send(
-        process.env.EMAILJS_SERVICE,
-        process.env.EMAILJS_TEMPLATE_APPROVED,
-        {
-          stationName: application.stationName,
-          location: application.location,
-          to_email: application.ownerEmail,
-        },
-        process.env.EMAILJS_PUBLIC_KEY
-      );
-    }
-
-    if (req.body.status === "rejected") {
-      // send rejection email
-      await emailjs.send(
-        process.env.EMAILJS_SERVICE,
-        process.env.EMAILJS_TEMPLATE_REJECTED,
-        {
-          stationName: application.stationName,
-          location: application.location,
-          to_email: application.ownerEmail,
-        },
-        process.env.EMAILJS_PUBLIC_KEY
-      );
-    }
-
-    res.status(200).json(result);
-  } catch (error) {
-    next(error);
+    const updatedApp = await OwnerSettingService.updateApplication(req.params.id, req.body);
+    console.log("Updated app:", updatedApp);
+    res.status(200).json(updatedApp);
+  } catch (err) {
+    console.error("🔥 PUT error:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-
-// Admin: delete application
+// DELETE: Remove application (admin)
 router.delete("/:id", requireAuth, allowToAdminOnly, async (req, res, next) => {
   try {
     const result = await OwnerSettingService.deleteApplication(req.params.id);
-    res.json(result);
+    res.status(200).json(result);
   } catch (error) {
     next(error);
   }
